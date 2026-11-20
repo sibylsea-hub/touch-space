@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 安卓 13+：直接给整个 View 挂 AGSL 着色器做水纹，不用截图（未实测，照官方 API 写的思路代码）
 @RequiresApi(33)
 class RippleEffect(private val target: View) {

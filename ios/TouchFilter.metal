@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · iOS 参考代码：全屏片元着色器（水纹 / 皮肤）。网页版同一套写成 GLSL，见 mcp/pad.html。
 
 //

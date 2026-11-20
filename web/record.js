@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 网页：用 Pointer Events 记下每一笔（多指、鼠标、触控笔都走这一套）
 const strokes = []; const active = new Map(); let timer = null;
 

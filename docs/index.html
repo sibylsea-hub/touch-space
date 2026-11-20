@@ -163,7 +163,8 @@ button:focus-visible, summary:focus-visible { outline: 2px solid var(--warm); ou
       </tbody>
     </table></div>
     <div class="codes">
-      <details class="code"><summary><span class="file">ios/TouchSurface.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">记下每一笔 + 按接触面积估轻重</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：记下每一笔。
+      <details class="code"><summary><span class="file">ios/TouchSurface.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">记下每一笔 + 按接触面积估轻重</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · iOS 参考代码：记下每一笔。
 // 一根手指从按下到抬起是一笔，期间记位置、时间、轻重。几根手指同时按着就是同时有几笔。
 // 所有手指离开后，等一会儿（比如 2 秒）没人再摸，把这一批交给 TouchTranslator。
 
@@ -272,7 +273,8 @@ final class TouchSurfaceView: UIView {
     }
 }
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">web/record.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">Pointer Events 记触摸（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 网页：用 Pointer Events 记下每一笔（多指、鼠标、触控笔都走这一套）
+      <details class="code"><summary><span class="file">web/record.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">Pointer Events 记触摸（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 网页：用 Pointer Events 记下每一笔（多指、鼠标、触控笔都走这一套）
 const strokes = []; const active = new Map(); let timer = null;
 
 function pressureOf(e) {
@@ -307,7 +309,8 @@ const up = e =&gt; {
 };
 el.addEventListener(&#x27;pointerup&#x27;, up); el.addEventListener(&#x27;pointercancel&#x27;, up);
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">android/Record.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">MotionEvent 记触摸</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓：在自定义 View 里记下每一笔（未实测，照官方 API 写的思路代码）
+      <details class="code"><summary><span class="file">android/Record.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">MotionEvent 记触摸</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 安卓：在自定义 View 里记下每一笔（未实测，照官方 API 写的思路代码）
 data class Sample(val x: Float, val y: Float, val t: Double, val p: Float)
 class Stroke(val samples: MutableList&lt;Sample&gt;, var ended: Boolean = false)
 
@@ -366,7 +369,8 @@ override fun onTouchEvent(e: MotionEvent): Boolean {
       </tbody>
     </table></div>
     <div class="codes">
-      <details class="code"><summary><span class="file">ios/TouchFilter.metal</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Metal 着色器：水纹、皮肤</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：全屏片元着色器（水纹 / 皮肤）。网页版同一套写成 GLSL，见 mcp/pad.html。
+      <details class="code"><summary><span class="file">ios/TouchFilter.metal</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Metal 着色器：水纹、皮肤</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · iOS 参考代码：全屏片元着色器（水纹 / 皮肤）。网页版同一套写成 GLSL，见 mcp/pad.html。
 
 //
 // 进空间前截的聊天页是一张纹理，`touch_filter_fragment` 按手指算每个像素该从截图的哪里取色。
@@ -466,7 +470,8 @@ fragment float4 touch_filter_fragment(TouchVOut in [[stage_in]],
 }
 
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">ios/TouchFilter.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">截图 + 手指物理（水滴、皮肤的弹簧）+ 统一参数</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：画面效果的「物理」和截图。
+      <details class="code"><summary><span class="file">ios/TouchFilter.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">截图 + 手指物理（水滴、皮肤的弹簧）+ 统一参数</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · iOS 参考代码：画面效果的「物理」和截图。
 // TouchSnapshot：进触感空间时把聊天页拍成一张图（之后在着色器里扭它）。
 // TouchFilter：水纹的滴、皮肤的手指槽，每帧推一次，打包成着色器的统一参数（布局见 TouchFilter.metal 开头）。
 // 渲染器没有放进来：一个 MTKView、一个全屏三角形、一张纹理，静下来（isBusy == false）就 isPaused = true。
@@ -812,7 +817,8 @@ final class TouchFilter {
     }
 }
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">web/shader.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">WebGL 着色器（摘自 mcp/pad.html，完整的物理也在那个文件里）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 网页：WebGL 全屏着色器（水纹 / 皮肤）。手指、水滴的位置每帧经 uniform 传进来；整页内容事先画进纹理 uTex。
+      <details class="code"><summary><span class="file">web/shader.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">WebGL 着色器（摘自 mcp/pad.html，完整的物理也在那个文件里）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 网页：WebGL 全屏着色器（水纹 / 皮肤）。手指、水滴的位置每帧经 uniform 传进来；整页内容事先画进纹理 uTex。
 const fs = `
 precision highp float;
 uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime, uMode, uDpr, uAmp;
@@ -850,7 +856,8 @@ void main(){
   gl_FragColor = vec4(mix(col, uWarm, clamp(warm * .16, 0., .32)), 1.);
 }`;
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">android/RippleEffect.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">AGSL RuntimeShader 水纹（Android 13+）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓 13+：直接给整个 View 挂 AGSL 着色器做水纹，不用截图（未实测，照官方 API 写的思路代码）
+      <details class="code"><summary><span class="file">android/RippleEffect.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">AGSL RuntimeShader 水纹（Android 13+）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 安卓 13+：直接给整个 View 挂 AGSL 着色器做水纹，不用截图（未实测，照官方 API 写的思路代码）
 @RequiresApi(33)
 class RippleEffect(private val target: View) {
     private val shader = RuntimeShader(&quot;&quot;&quot;
@@ -904,7 +911,8 @@ class RippleEffect(private val target: View) {
       </tbody>
     </table></div>
     <div class="codes">
-      <details class="code"><summary><span class="file">ios/TouchHaptics.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Core Haptics：按下 ∝ 轻重、连续震动、松手</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：震动（Core Haptics）。按下一下 ∝ 轻重；抚的时候一条循环的连续震动，强度跟着轻重、锐度跟着速度。
+      <details class="code"><summary><span class="file">ios/TouchHaptics.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Core Haptics：按下 ∝ 轻重、连续震动、松手</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · iOS 参考代码：震动（Core Haptics）。按下一下 ∝ 轻重；抚的时候一条循环的连续震动，强度跟着轻重、锐度跟着速度。
 
 import Foundation
 import CoreHaptics
@@ -1012,7 +1020,8 @@ final class TouchHaptics {
     }
 }
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">web/haptic.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">navigator.vibrate（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// ---------- 震动：网页只能控时长（安卓 Chrome 有，iOS Safari 没有） ----------
+      <details class="code"><summary><span class="file">web/haptic.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">navigator.vibrate（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// ---------- 震动：网页只能控时长（安卓 Chrome 有，iOS Safari 没有） ----------
 const buzz = ms =&gt; { try { navigator.vibrate &amp;&amp; navigator.vibrate(ms); } catch (_) {} };
 
 // 按下那一下：越重越长
@@ -1020,7 +1029,8 @@ buzz(Math.round(8 + 25 * p));
 // 抚的时候：每走 60px 轻敲一下（网页没有连续震动、也调不了强度）
 if (travel &gt; 60) { travel = 0; buzz(Math.round(5 + 15 * p)); }
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">android/Haptics.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">VibrationEffect 按轻重调强度</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓：按轻重调震动强度（未实测，照官方 API 写的思路代码）
+      <details class="code"><summary><span class="file">android/Haptics.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">VibrationEffect 按轻重调强度</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 安卓：按轻重调震动强度（未实测，照官方 API 写的思路代码）
 val vibrator: Vibrator = if (Build.VERSION.SDK_INT &gt;= 31)
     context.getSystemService(VibratorManager::class.java).defaultVibrator
 else @Suppress(&quot;DEPRECATION&quot;) context.getSystemService(Vibrator::class.java)
@@ -1076,7 +1086,8 @@ fun stroke(travelledDp: Float, p: Float) { if (travelledDp &gt; 60) tap(p * 0.6f
       <li><b>用 <code>&lt;touch&gt;</code> 标签包住，放在正文最前面、和正文在同一个文本块里。</b>聊天界面能认出它，折成「👆 3」的小标签，点开看全文。</li>
     </ul>
     <div class="codes">
-      <details class="code"><summary><span class="file">translate.js</span><span class="badge plat">网页 / Node</span><span class="badge ok">实测</span><span class="status">翻译（触摸板和 MCP 版用的就是它）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
+      <details class="code"><summary><span class="file">translate.js</span><span class="badge plat">网页 / Node</span><span class="badge ok">实测</span><span class="status">翻译（触摸板和 MCP 版用的就是它）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
 // 浏览器里是全局 TouchTranslate，Node 里 require/import 都行。不依赖任何库。
 //
 // 输入：strokes = [{ samples: [{x, y, t, p}], start, end, ended }]
@@ -1234,7 +1245,8 @@ fun stroke(travelledDp: Float, p: Float) { if (travelledDp &gt; 60) tap(p * 0.6f
   root.TouchTranslate = api;
 })(typeof globalThis !== &#x27;undefined&#x27; ? globalThis : this);
 </code></pre></div></details>
-      <details class="code"><summary><span class="file">ios/TouchTranslator.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">翻译（同一套规则的 Swift 版）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：翻译。把一批触摸翻译成像身体感觉一样的一段话。
+      <details class="code"><summary><span class="file">ios/TouchTranslator.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">翻译（同一套规则的 Swift 版）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 触感空间 · iOS 参考代码：翻译。把一批触摸翻译成像身体感觉一样的一段话。
 // 和仓库根目录的 translate.js 是同一套规则（那份给网页和 MCP 版用），两边改的时候一起改。
 //
 // 用法：TouchTranslator.describe(batch, area: view.bounds.size, map: .screen)
@@ -1452,7 +1464,8 @@ enum TouchTranslator {
       </div>
     </div>
     <div class="codes">
-      <details class="code"><summary><span class="file">web/send-from-your-frontend.js</span><span class="badge plat">自己的前端</span><span class="badge ok">实测</span><span class="status">发送时拼进消息 + 气泡里折叠（通用写法）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 自己的前端：发送时把攒下的触摸翻译排在正文前面，合成同一个文本块（通用写法）
+      <details class="code"><summary><span class="file">web/send-from-your-frontend.js</span><span class="badge plat">自己的前端</span><span class="badge ok">实测</span><span class="status">发送时拼进消息 + 气泡里折叠（通用写法）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
+// 自己的前端：发送时把攒下的触摸翻译排在正文前面，合成同一个文本块（通用写法）
 function buildMessage(draft, pendingTouch) {
   const parts = [];
   if (pendingTouch) parts.push(pendingTouch);   // &lt;touch strokes=&quot;…&quot;&gt; … &lt;/touch&gt;
@@ -1533,6 +1546,7 @@ function splitTouch(text) {
 - `../translate.js` 里的 `place()`：位置怎么说。屏幕、上半身两套都在这里，加别的映射也在这里。
 </code></pre></div></details>
       <details class="code"><summary><span class="file">mcp/server.mjs</span><span class="badge plat">MCP 版 · Node</span><span class="badge ok">实测</span><span class="status">零依赖 MCP 服务：stdio + 远程 HTTP + 触摸页</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>#!/usr/bin/env node
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · MCP 版服务（零依赖，Node 18+）
 //
 // 做两件事：
@@ -1694,6 +1708,7 @@ server.listen(PORT, &#x27;0.0.0.0&#x27;, () =&gt; {
 });
 </code></pre></div></details>
       <details class="code"><summary><span class="file">mcp/pad.html</span><span class="badge plat">MCP 版 · 网页</span><span class="badge ok">实测</span><span class="status">手机打开的触摸页：水纹 / 皮肤、震动、翻译、送出</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>&lt;!doctype html&gt;
+&lt;!-- SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 --&gt;
 &lt;html lang=&quot;zh&quot;&gt;
 &lt;head&gt;
 &lt;meta charset=&quot;utf-8&quot;&gt;
@@ -1995,6 +2010,7 @@ resize();
 </main>
 
 <script>
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
 // 浏览器里是全局 TouchTranslate，Node 里 require/import 都行。不依赖任何库。
 //

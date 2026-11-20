@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · iOS 参考代码：画面效果的「物理」和截图。
 // TouchSnapshot：进触感空间时把聊天页拍成一张图（之后在着色器里扭它）。
 // TouchFilter：水纹的滴、皮肤的手指槽，每帧推一次，打包成着色器的统一参数（布局见 TouchFilter.metal 开头）。

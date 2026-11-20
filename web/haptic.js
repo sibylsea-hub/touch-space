@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // ---------- 震动：网页只能控时长（安卓 Chrome 有，iOS Safari 没有） ----------
 const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} };
 

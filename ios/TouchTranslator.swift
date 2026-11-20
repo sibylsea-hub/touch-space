@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · iOS 参考代码：翻译。把一批触摸翻译成像身体感觉一样的一段话。
 // 和仓库根目录的 translate.js 是同一套规则（那份给网页和 MCP 版用），两边改的时候一起改。
 //

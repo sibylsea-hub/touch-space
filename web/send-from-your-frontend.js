@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 自己的前端：发送时把攒下的触摸翻译排在正文前面，合成同一个文本块（通用写法）
 function buildMessage(draft, pendingTouch) {
   const parts = [];

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
 // 浏览器里是全局 TouchTranslate，Node 里 require/import 都行。不依赖任何库。
 //

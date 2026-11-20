@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 安卓：按轻重调震动强度（未实测，照官方 API 写的思路代码）
 val vibrator: Vibrator = if (Build.VERSION.SDK_INT >= 31)
     context.getSystemService(VibratorManager::class.java).defaultVibrator

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 网页：WebGL 全屏着色器（水纹 / 皮肤）。手指、水滴的位置每帧经 uniform 传进来；整页内容事先画进纹理 uTex。
 const fs = `
 precision highp float;

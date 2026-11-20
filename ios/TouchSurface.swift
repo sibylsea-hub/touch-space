@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · iOS 参考代码：记下每一笔。
 // 一根手指从按下到抬起是一笔，期间记位置、时间、轻重。几根手指同时按着就是同时有几笔。
 // 所有手指离开后，等一会儿（比如 2 秒）没人再摸，把这一批交给 TouchTranslator。

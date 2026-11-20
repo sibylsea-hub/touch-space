@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 触感空间 · MCP 版服务（零依赖，Node 18+）
 //
 // 做两件事：

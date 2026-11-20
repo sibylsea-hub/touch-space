@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
 // 安卓：在自定义 View 里记下每一笔（未实测，照官方 API 写的思路代码）
 data class Sample(val x: Float, val y: Float, val t: Double, val p: Float)
 class Stroke(val samples: MutableList<Sample>, var ended: Boolean = false)
