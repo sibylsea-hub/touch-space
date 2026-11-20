@@ -1,0 +1,2249 @@
+<!doctype html>
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+</head>
+<body>
+<title>触感空间</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@600&family=Noto+Sans+SC:wght@400;500&display=swap">
+<style>
+/* 布局：一栏读物。开头一块能摸的触摸板，往下按「记下 → 当场反馈（画面、震感）→ 翻译 → 送进对话」排，
+   每一节先讲思路，再按平台给代码（折叠起来，标清楚哪段实测过、哪段没有）。颜色取自触感空间的草图。 */
+:root {
+  --paper: #eef1f2;
+  --ink: #232a2f;
+  --muted: #5f6c75;
+  --wash: #d6e2e9;
+  --line: #cfd8dd;
+  --warm: #b8664f;
+  --pad: #f7f9fa;
+  --code: #e3eaee;
+  --ok: #3f7a5a;
+  --todo: #a0703a;
+  --font-head: "Noto Serif SC", "Songti SC", "Hiragino Mincho ProN", serif;
+  --font-body: "Noto Sans SC", -apple-system, "PingFang SC", "Hiragino Sans GB", sans-serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #14181b; --ink: #e2e7ea; --muted: #94a2ab; --wash: #24323b; --line: #2b353b;
+    --warm: #d9876e; --pad: #1b2125; --code: #1f272c; --ok: #7cc39b; --todo: #d7a46a; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #14181b; --ink: #e2e7ea; --muted: #94a2ab; --wash: #24323b; --line: #2b353b;
+  --warm: #d9876e; --pad: #1b2125; --code: #1f272c; --ok: #7cc39b; --todo: #d7a46a; color-scheme: dark;
+}
+body {
+  background: var(--paper); color: var(--ink); font: 16px/1.8 var(--font-body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 32px 64px;
+}
+main { max-width: 760px; margin: 0 auto; display: flex; flex-direction: column; gap: 52px; }
+h1, h2, h3 { font-family: var(--font-head); font-weight: 600; text-wrap: balance; line-height: 1.35; margin: 0; }
+h1 { font-size: 34px; }
+h2 { font-size: 24px; padding-top: 10px; border-top: 1px solid var(--line); }
+h3 { font-size: 18px; }
+p { margin: 0; }
+section { display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.lede { color: var(--muted); font-size: 17px; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--warm); }
+code { font-family: var(--font-mono); font-size: .86em; background: var(--code); padding: 1px 5px; border-radius: 4px; }
+ul, ol { margin: 0; padding-left: 1.3em; display: flex; flex-direction: column; gap: 6px; }
+.table-wrap { overflow-x: auto; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; line-height: 1.6; }
+th, td { text-align: left; vertical-align: top; padding: 9px 10px; border-bottom: 1px solid var(--line); }
+th { font-weight: 500; color: var(--muted); white-space: nowrap; }
+.example { font-family: var(--font-mono); font-size: 13.5px; line-height: 1.7; white-space: pre-wrap; word-break: break-word;
+  background: var(--code); border-radius: 10px; padding: 14px 16px; margin: 0; }
+.note { border-left: 3px solid var(--warm); padding-left: 14px; color: var(--muted); }
+
+/* 管线 */
+.pipe { display: flex; flex-wrap: wrap; gap: 8px; }
+.step { flex: 1 1 120px; background: var(--wash); border-radius: 12px; padding: 12px 14px; min-width: 0; }
+.step b { display: block; font-weight: 500; }
+.step span { font-size: 13.5px; color: var(--muted); line-height: 1.55; display: block; }
+
+/* 代码块：按平台折叠 */
+details.code { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+details.code > summary { cursor: pointer; padding: 11px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; list-style: none; }
+details.code > summary::-webkit-details-marker { display: none; }
+details.code > summary::before { content: "▸"; color: var(--muted); transition: transform .15s; }
+details.code[open] > summary::before { transform: rotate(90deg); }
+.file { font-family: var(--font-mono); font-size: 13.5px; }
+.badge { font-size: 12px; border-radius: 999px; padding: 1px 9px; border: 1px solid currentColor; white-space: nowrap; }
+.badge.ok { color: var(--ok); }
+.badge.todo { color: var(--todo); }
+.badge.plat { color: var(--muted); }
+.code-body { position: relative; border-top: 1px solid var(--line); }
+.code-body pre { margin: 0; padding: 14px 16px; overflow-x: auto; max-height: 520px; background: var(--code);
+  font: 12.5px/1.6 var(--font-mono); tab-size: 2; }
+.copy-code { position: absolute; top: 8px; right: 10px; font: 500 12px/1 var(--font-body); padding: 6px 10px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--paper); color: var(--ink); cursor: pointer; }
+.codes { display: flex; flex-direction: column; gap: 8px; }
+
+/* 三种接入 */
+.routes { display: grid; grid-template-columns: 1fr; gap: 14px; }
+.route { border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.route .tag { font-size: 12.5px; color: var(--warm); letter-spacing: .06em; }
+@media (min-width: 760px) { .routes { grid-template-columns: 1fr 1fr 1fr; } }
+
+/* 触摸板 */
+.pad { position: relative; height: 320px; border-radius: 16px; background: var(--pad); border: 1px solid var(--line);
+  touch-action: none; overflow: hidden; -webkit-user-select: none; user-select: none; cursor: crosshair; }
+.pad canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.pad .hint { position: absolute; inset: 0; display: grid; place-items: center; color: var(--muted); font-size: 14px; pointer-events: none; text-align: center; padding: 16px; }
+.controls { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 999px; padding: 3px; gap: 2px; }
+.seg button { font: 500 14px/1 var(--font-body); color: var(--ink); background: transparent; border: 0; padding: 8px 14px; border-radius: 999px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--paper); }
+.btn { font: 500 14px/1 var(--font-body); border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 9px 16px; cursor: pointer; }
+.btn.primary { background: var(--warm); border-color: var(--warm); color: #fff; }
+button:focus-visible, summary:focus-visible { outline: 2px solid var(--warm); outline-offset: 2px; }
+.status { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+#out { min-height: 120px; }
+</style>
+
+<main>
+  <header style="display:flex;flex-direction:column;gap:12px">
+    <div class="eyebrow">思路 + 参考代码</div>
+    <h1>触感空间：手机屏幕就是最好的触感记录仪</h1>
+    <p class="lede">想让陪伴模型「感觉」到你，很多人第一反应是买外接设备、接传感器。其实你手里的手机就是现成的触感记录仪：多指、位置、轻重、快慢，它都能记，而且离你的手最近。剩下的事是三件：让屏幕在你指下有回应（画面变形、震感），把记下来的触摸<b>翻译</b>成模型读得懂的身体感觉，再送进你们的对话。</p>
+    <p class="note">下面每一节先讲思路，再按平台给代码。代码是从我们自己的实现里整理出来的，标了「实测」的跑过；标「未实测」的是照官方 API 写的思路代码，拿去用要自己试。接到我们自己聊天前端的那部分接口没有放出来，换成了通用写法。</p>
+  </header>
+
+  <section class="demo" aria-labelledby="try">
+    <h2 id="try">先摸摸看</h2>
+    <p>这块板子用的就是下面「翻译」那一节的规则。在上面点、按住、划、画圈，或者两根手指张开、合拢；停手两秒，它把这批触摸翻译成一段话。复制下来贴进任何聊天都能用。</p>
+    <div class="controls">
+      <div class="seg" role="group" aria-label="位置怎么说">
+        <button id="map-screen" data-map="screen" aria-pressed="true">屏幕</button>
+        <button id="map-body" data-map="body" aria-pressed="false">上半身</button>
+      </div>
+      <span class="status" id="status">还没摸</span>
+    </div>
+    <div class="pad" id="pad">
+      <canvas id="cv" aria-label="触摸板：在这里摸"></canvas>
+      <div class="hint" id="hint">在这里摸（手机上用手指，电脑上用鼠标或触控板）</div>
+    </div>
+    <pre class="example" id="out" aria-live="polite">停手两秒后，翻译会出现在这里。</pre>
+    <div class="controls">
+      <span class="status">安卓 Chrome 上还会跟着震；iPhone 的网页不支持震动。</span>
+      <div style="display:flex;gap:8px">
+        <button class="btn" id="clear">清掉</button>
+        <button class="btn primary" id="copy">复制</button>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="pipe">
+    <h2 id="pipe">一条管线</h2>
+    <p>不管什么平台，做的都是这几件事。前两步在手机上当场完成，不经过模型，所以模型再慢也不影响手感。</p>
+    <div class="pipe">
+      <div class="step"><b>记下每一笔</b><span>位置、时间、轻重</span></div>
+      <div class="step"><b>画面回应</b><span>水纹、皮肤，几毫秒内</span></div>
+      <div class="step"><b>震感回应</b><span>按下、抚过、松手</span></div>
+      <div class="step"><b>翻译</b><span>规则判断动作，翻成身体感觉</span></div>
+      <div class="step"><b>送进对话</b><span>自己的前端、MCP 或复制粘贴</span></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="record">
+    <h2 id="record">记下每一笔</h2>
+    <p>一根手指从按下到抬起是一笔，期间不停地记<b>位置、时间、轻重</b>。几根手指同时按着就是同时有几笔。所有手指离开、两秒内没再摸，这一批就记完了，交给翻译。</p>
+    <p>轻重最麻烦：现在的 iPhone 没有压感（3D Touch 的硬件已经拆了），只能按手指贴在屏幕上的面积估。轻轻点大约是半径 12–20pt，按实了能到 40pt 上下，换算成 0–1。档位粗，但够分出四档。</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>平台</th><th>位置和时间</th><th>轻重</th></tr></thead>
+      <tbody>
+        <tr><td>iPhone 原生</td><td><code>touchesBegan/Moved/Ended</code>，合并触摸 <code>coalescedTouches</code> 拿 120Hz 的中间点</td><td>手指：<code>majorRadius</code> 接触半径；Apple Pencil：<code>force</code> 真压力</td></tr>
+        <tr><td>安卓原生</td><td><code>onTouchEvent</code>，多指用 <code>getPointerId</code>，中间点用 <code>getHistoricalX/Y</code></td><td><code>getPressure()</code>（很多机型给的也是面积换算的值）、<code>getTouchMajor()</code> 接触面积，按机型选</td></tr>
+        <tr><td>网页</td><td>Pointer Events（<code>pointerdown/move/up</code>）</td><td><code>pressure</code>（笔有真值，手指多半固定 0.5）、<code>width/height</code> 接触面积（安卓 Chrome 有，iOS Safari 基本没有）；拿不到就当「轻轻」</td></tr>
+      </tbody>
+    </table></div>
+    <div class="codes">
+      <details class="code"><summary><span class="file">ios/TouchSurface.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">记下每一笔 + 按接触面积估轻重</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：记下每一笔。
+// 一根手指从按下到抬起是一笔，期间记位置、时间、轻重。几根手指同时按着就是同时有几笔。
+// 所有手指离开后，等一会儿（比如 2 秒）没人再摸，把这一批交给 TouchTranslator。
+
+import UIKit
+
+struct TouchSample {
+    /// 在这个视图里的坐标（pt，左上原点）。
+    let point: CGPoint
+    /// 系统开机以来的秒数（UITouch.timestamp）。
+    let time: TimeInterval
+    /// 轻重 0…1。
+    let pressure: CGFloat
+}
+
+struct TouchStroke {
+    var samples: [TouchSample]
+    var ended = false
+    var endedAt: TimeInterval?
+    /// 实时发送用：上一次发送时这根手指还按着，这一笔是接着那一下的。
+    var continued = false
+
+    var start: TimeInterval { samples.first!.time }
+    var end: TimeInterval { endedAt ?? samples.last!.time }
+}
+
+/// 收多指触摸的视图。把它铺满屏幕（或者铺在聊天页上面），实现 `onBatch` 拿到一批触摸。
+final class TouchSurfaceView: UIView {
+    /// 所有手指离开、`pause` 秒内没再摸时调用，交出这一批。
+    var onBatch: (([TouchStroke]) -&gt; Void)?
+    /// 每个采样都回调一次（给画面效果、震动用）。
+    var onSample: ((ObjectIdentifier, TouchSample, _ phase: UITouch.Phase) -&gt; Void)?
+    var pause: TimeInterval = 2
+
+    private var strokes: [TouchStroke] = []
+    private var active: [ObjectIdentifier: Int] = [:]
+    private var timer: Timer?
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+        isMultipleTouchEnabled = true
+    }
+
+    required init?(coder: NSCoder) {
+        super.init(coder: coder)
+        isMultipleTouchEnabled = true
+    }
+
+    override func touchesBegan(_ touches: Set&lt;UITouch&gt;, with event: UIEvent?) {
+        timer?.invalidate()
+        for touch in touches {
+            let s = sample(touch)
+            strokes.append(TouchStroke(samples: [s]))
+            active[ObjectIdentifier(touch)] = strokes.count - 1
+            onSample?(ObjectIdentifier(touch), s, .began)
+        }
+    }
+
+    override func touchesMoved(_ touches: Set&lt;UITouch&gt;, with event: UIEvent?) {
+        for touch in touches {
+            guard let index = active[ObjectIdentifier(touch)] else { continue }
+            // 合并触摸：120Hz 屏上一帧里攒下的中间点也要，轨迹才顺。
+            for t in event?.coalescedTouches(for: touch) ?? [touch] {
+                let s = sample(t)
+                let last = strokes[index].samples.last!
+                // 几乎没动、轻重也没变的点不记，省得一笔里攒几千个点。
+                if hypot(s.point.x - last.point.x, s.point.y - last.point.y) &lt; 1.5, abs(s.pressure - last.pressure) &lt; 0.03 { continue }
+                strokes[index].samples.append(s)
+                onSample?(ObjectIdentifier(touch), s, .moved)
+            }
+        }
+    }
+
+    override func touchesEnded(_ touches: Set&lt;UITouch&gt;, with event: UIEvent?) { finish(touches) }
+    override func touchesCancelled(_ touches: Set&lt;UITouch&gt;, with event: UIEvent?) { finish(touches) }
+
+    private func finish(_ touches: Set&lt;UITouch&gt;) {
+        for touch in touches {
+            guard let index = active.removeValue(forKey: ObjectIdentifier(touch)) else { continue }
+            strokes[index].ended = true
+            strokes[index].endedAt = touch.timestamp
+            onSample?(ObjectIdentifier(touch), sample(touch), .ended)
+        }
+        guard active.isEmpty else { return }
+        timer = Timer.scheduledTimer(withTimeInterval: pause, repeats: false) { [weak self] _ in
+            guard let self, !self.strokes.isEmpty else { return }
+            let batch = self.strokes
+            self.strokes = []
+            self.onBatch?(batch)
+        }
+    }
+
+    /// 轻重：现在的 iPhone 没有压感（3D Touch 的硬件已经拆了，force 恒为 0），
+    /// 只能按手指贴在屏幕上的面积估：轻轻点大约半径 12–20pt，按实了能到 40pt 上下。
+    /// Apple Pencil 有真压力。
+    private func sample(_ touch: UITouch) -&gt; TouchSample {
+        let point = touch.preciseLocation(in: self)
+        let hasForce = touch.maximumPossibleForce &gt; 0
+            &amp;&amp; (touch.type == .pencil || traitCollection.forceTouchCapability == .available)
+        let p: CGFloat
+        if hasForce {
+            p = min(1, touch.force / touch.maximumPossibleForce)
+        } else {
+            p = min(1, max(0, (touch.majorRadius - 12) / 32))
+        }
+        return TouchSample(point: point, time: touch.timestamp, pressure: p)
+    }
+}
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">web/record.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">Pointer Events 记触摸（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 网页：用 Pointer Events 记下每一笔（多指、鼠标、触控笔都走这一套）
+const strokes = []; const active = new Map(); let timer = null;
+
+function pressureOf(e) {
+  if (e.pointerType === &#x27;pen&#x27; &amp;&amp; e.pressure &gt; 0) return Math.min(1, e.pressure);       // 触控笔：真压力
+  if (e.pointerType === &#x27;touch&#x27; &amp;&amp; (e.width &gt; 1 || e.height &gt; 1))                      // 手指：按接触面积估
+    return Math.min(1, Math.max(0, (Math.max(e.width, e.height) / 2 - 12) / 32));
+  return 0.3;                                                                          // 拿不到就当「轻轻」
+}
+
+el.style.touchAction = &#x27;none&#x27;;   // 不让浏览器拿去滚动、缩放
+el.addEventListener(&#x27;pointerdown&#x27;, e =&gt; {
+  el.setPointerCapture(e.pointerId);
+  clearTimeout(timer);
+  const t = e.timeStamp / 1000, p = pressureOf(e);
+  const stroke = { samples: [{ x: e.offsetX, y: e.offsetY, t, p }], start: t, end: t, ended: false };
+  strokes.push(stroke); active.set(e.pointerId, stroke);
+});
+el.addEventListener(&#x27;pointermove&#x27;, e =&gt; {
+  const s = active.get(e.pointerId); if (!s) return;
+  const t = e.timeStamp / 1000, last = s.samples[s.samples.length - 1];
+  if (Math.hypot(e.offsetX - last.x, e.offsetY - last.y) &lt; 1.5) return;   // 几乎没动的点不记
+  s.samples.push({ x: e.offsetX, y: e.offsetY, t, p: pressureOf(e) }); s.end = t;
+});
+const up = e =&gt; {
+  const s = active.get(e.pointerId); if (!s) return;
+  s.end = e.timeStamp / 1000; s.ended = true; active.delete(e.pointerId);
+  // 所有手指离开、两秒没再摸：这一批交给翻译
+  if (!active.size) timer = setTimeout(() =&gt; {
+    const text = TouchTranslate.describe(strokes.splice(0), { w: el.clientWidth, h: el.clientHeight }, &#x27;screen&#x27;);
+    // → 拼进消息 / POST 给 MCP 服务 / 放进剪贴板
+  }, 2000);
+};
+el.addEventListener(&#x27;pointerup&#x27;, up); el.addEventListener(&#x27;pointercancel&#x27;, up);
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">android/Record.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">MotionEvent 记触摸</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓：在自定义 View 里记下每一笔（未实测，照官方 API 写的思路代码）
+data class Sample(val x: Float, val y: Float, val t: Double, val p: Float)
+class Stroke(val samples: MutableList&lt;Sample&gt;, var ended: Boolean = false)
+
+private val strokes = mutableListOf&lt;Stroke&gt;()
+private val active = mutableMapOf&lt;Int, Stroke&gt;()          // pointerId → 这根手指的一笔
+
+private fun pressureOf(e: MotionEvent, i: Int): Float {
+    // 有的机型 getPressure 是真压力，有的是按面积换算的；也可以用接触椭圆的长轴 touchMajor（像素）自己换算
+    val major = e.getTouchMajor(i) / resources.displayMetrics.density   // 换成 dp
+    val byArea = ((major / 2 - 12) / 32).coerceIn(0f, 1f)
+    return maxOf(e.getPressure(i).coerceIn(0f, 1f), byArea)
+}
+
+override fun onTouchEvent(e: MotionEvent): Boolean {
+    val t = e.eventTime / 1000.0
+    when (e.actionMasked) {
+        MotionEvent.ACTION_DOWN, MotionEvent.ACTION_POINTER_DOWN -&gt; {
+            val i = e.actionIndex
+            val s = Stroke(mutableListOf(Sample(e.getX(i), e.getY(i), t, pressureOf(e, i))))
+            strokes += s; active[e.getPointerId(i)] = s
+        }
+        MotionEvent.ACTION_MOVE -&gt; for (i in 0 until e.pointerCount) {
+            val s = active[e.getPointerId(i)] ?: continue
+            // 一帧里攒下的中间点（对应 iOS 的合并触摸）
+            for (h in 0 until e.historySize)
+                s.samples += Sample(e.getHistoricalX(i, h), e.getHistoricalY(i, h), e.getHistoricalEventTime(h) / 1000.0, pressureOf(e, i))
+            s.samples += Sample(e.getX(i), e.getY(i), t, pressureOf(e, i))
+        }
+        MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -&gt; {
+            val i = e.actionIndex
+            active.remove(e.getPointerId(i))?.ended = true
+            if (active.isEmpty()) scheduleTranslate()   // 两秒没再摸就翻译这一批（规则同 translate.js）
+        }
+    }
+    return true
+}
+</code></pre></div></details>
+    </div>
+  </section>
+
+  <section aria-labelledby="visual">
+    <h2 id="visual">画面回应</h2>
+    <p>屏幕在你指下变形，是让人觉得「摸到了东西」的关键。做法：进入触感空间那一刻，把聊天页拍成一张图，铺满屏幕，再用一个全屏着色器按手指位置去扭这张图。看上去和聊天页一模一样，直到手指碰上去；而且任何界面都能扭，不用改聊天页本身。</p>
+    <ul>
+      <li><b>水纹</b>：按下落一滴，划动时每 22pt 落一滴，每滴起一两道圈往外走，150pt/秒、1.6 秒散完，指尖外一两百 pt 就淡掉。</li>
+      <li><b>皮肤</b>：手指处往里陷一小块（半径比指腹稍大一圈，能从手指边上露出来），皮肤被手指黏着拖一点，松手欠阻尼弹回、晃两下，按久了透出一点暖色。</li>
+      <li><b>省电</b>：只在有东西在动时画；一静下来，画完最后一帧就暂停，一帧都不画。截图和画布最多按 2 倍像素算。</li>
+      <li><b>想让回话出现在被摸的画面里</b>：把触感空间放到单独一层（iOS 是单独的窗口），这样随时能重拍下面的聊天页，回话一到就重拍一次。</li>
+    </ul>
+    <div class="table-wrap"><table>
+      <thead><tr><th>平台</th><th>怎么扭画面</th><th>做不到时</th></tr></thead>
+      <tbody>
+        <tr><td>iPhone 原生</td><td>截图（<code>drawHierarchy</code>）+ Metal 全屏片元着色器</td><td></td></tr>
+        <tr><td>安卓原生</td><td>Android 13 起直接给 View 挂 <code>RuntimeShader</code>（AGSL），不用截图</td><td>更早的版本：截图（<code>PixelCopy</code>）+ OpenGL ES 着色器</td></tr>
+        <tr><td>网页</td><td>WebGL 着色器扭一张图：自己的页面可以把内容画进 canvas</td><td>扭不了别人的页面，就在单独的触摸页上扭一张「纸」（MCP 版就是这样），或者只画波纹</td></tr>
+      </tbody>
+    </table></div>
+    <div class="codes">
+      <details class="code"><summary><span class="file">ios/TouchFilter.metal</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Metal 着色器：水纹、皮肤</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：全屏片元着色器（水纹 / 皮肤）。网页版同一套写成 GLSL，见 mcp/pad.html。
+
+//
+// 进空间前截的聊天页是一张纹理，`touch_filter_fragment` 按手指算每个像素该从截图的哪里取色。
+// 和网页 GLSL 版的差别只有坐标系：GLSL 的 gl_FragCoord 左下原点、y 向上，Metal 的片元坐标左上原点、y 向下，所以
+// - 手指、水滴的位置直接传像素坐标，不做 `H - y` 翻转；皮肤的拖拽位移 y 也不取反；
+// - 皮肤的光照方向 (-.55, .8) 写成 (-.55, -.8)。
+//
+// 统一参数 `u` 是一串 float4，下标与 Swift 侧 `TouchFilter.uniforms` 一一对应（改一边必须改另一边）：
+//   u[0] = 画布像素宽高、时间（秒）、模式（0 水纹 / 1 皮肤）
+//   u[1] = 渲染缩放（像素 / pt）、幅度、皮肤范围倍数、0
+//   u[2] = 画布在截图里的 UV 子矩形：原点 xy、尺寸 zw
+//   u[3] = 暖色 rgb；u[4] = 空着
+//   u[5 + i]  = 第 i 滴水：x、y（像素）、起始时刻、强度（40 滴）
+//   u[45 + i] = 第 i 根手指：x、y（像素）、深度 / 吸力、暖（5 根）
+//   u[50 + i] = 第 i 根手指被拖着走的位移 x、y（像素）
+
+#include &lt;metal_stdlib&gt;
+using namespace metal;
+
+constant int kFilterDrops = 40;
+constant int kFilterFingers = 5;
+constant int kFilterDropBase = 5;
+constant int kFilterFingerBase = 45;
+constant int kFilterOffsetBase = 50;
+
+struct TouchVOut {
+    float4 position [[position]];
+    float2 uv;
+};
+
+vertex TouchVOut touch_vertex(uint vid [[vertex_id]]) {
+    // 一个盖满屏幕的大三角形。uv 左上为原点（与 pt 坐标同向）。
+    float2 xy = float2(float((vid &lt;&lt; 1) &amp; 2), float(vid &amp; 2));
+    TouchVOut o;
+    o.position = float4(xy * 2.0 - 1.0, 0.0, 1.0);
+    o.uv = float2(xy.x, 1.0 - xy.y);
+    return o;
+}
+
+fragment float4 touch_filter_fragment(TouchVOut in [[stage_in]],
+                                           texture2d&lt;float&gt; page [[texture(0)]],
+                                           sampler smp [[sampler(0)]],
+                                           constant float4 *u [[buffer(0)]]) {
+    float2 res = u[0].xy;
+    float time = u[0].z, mode = u[0].w;
+    float dpr = u[1].x, amp = u[1].y, skinSize = u[1].z;
+    float3 warmColor = u[3].rgb;
+
+    float2 p = in.position.xy, s = p;
+    float3 add = float3(0.0);
+    float mul = 1.0, warm = 0.0;
+    if (mode &lt; 0.5) {
+        float2 disp = float2(0.0);
+        float light = 0.0;
+        // 一滴只起一两道圈：包络比波长窄，圈往外走、变宽、变淡。
+        for (int i = 0; i &lt; kFilterDrops; i++) {
+            float4 d = u[kFilterDropBase + i];
+            float age = time - d.z;
+            // 现在 150pt/s、1.6 秒散完、衰减更快、波长更短，圈大约在指尖外一两百 pt 内就淡掉。
+            if (d.w &lt;= 0.0 || age &lt; 0.0 || age &gt; 1.6) continue;
+            float lam = (22.0 + 18.0 * age) * dpr, w = lam * 0.55;
+            float2 v = p - d.xy;
+            float r = length(v) + 0.001;
+            float x = r - age * 150.0 * dpr;
+            float env = exp(-x * x / (w * w)) * exp(-age * 2.2) * d.w / (1.0 + r / (140.0 * dpr));
+            env *= smoothstep(0.0, 16.0 * dpr, r);
+            float ph = x * 6.2831 / lam;
+            disp += v / r * sin(ph) * env;
+            light += cos(ph) * env;
+        }
+        s = p - disp * 10.0 * dpr * amp;
+        add = float3(light * 0.06 * amp);
+    } else {
+        const float2 L = normalize(float2(-0.55, -0.8));
+        for (int i = 0; i &lt; kFilterFingers; i++) {
+            float4 f = u[kFilterFingerBase + i];
+            float2 o = u[kFilterOffsetBase + i].xy;
+            if (abs(f.z) &lt; 1e-4 &amp;&amp; dot(o, o) &lt; 1e-4) continue;
+            // 凹陷 58→34pt（按久了 +18→+8），被拖的那圈 R²×3.2→×1.6（≈104pt→43pt）。
+            // 高斯在 2R 处才淡到看不出，所以 34pt 大约是「指腹边上再露出一圈」，不会整块藏在手指底下。
+            float R = (34.0 + 8.0 * f.w) * dpr * skinSize;
+            float2 v = p - f.xy;
+            float r2 = dot(v, v);
+            float fa = exp(-r2 / (R * R)), fb = exp(-r2 / (R * R * 1.6));
+            s += v * f.z * 0.85 * fa * amp - o * fb * amp;
+            float2 g = v / R * 2.0 * f.z * fa;
+            add += float3(dot(g, L) * 0.16 * amp);
+            mul *= 1.0 - 0.18 * max(f.z, 0.0) * fa;
+            warm += f.w * max(f.z, 0.0) * fa;
+        }
+    }
+    float2 uv = clamp(s / res, float2(0.0), float2(1.0));
+    uv = u[2].xy + uv * u[2].zw;
+    float3 col = page.sample(smp, uv).rgb * mul + add;
+    col = mix(col, warmColor, clamp(warm * 0.16, 0.0, 0.32));
+    return float4(col, 1.0);
+}
+
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">ios/TouchFilter.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">截图 + 手指物理（水滴、皮肤的弹簧）+ 统一参数</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：画面效果的「物理」和截图。
+// TouchSnapshot：进触感空间时把聊天页拍成一张图（之后在着色器里扭它）。
+// TouchFilter：水纹的滴、皮肤的手指槽，每帧推一次，打包成着色器的统一参数（布局见 TouchFilter.metal 开头）。
+// 渲染器没有放进来：一个 MTKView、一个全屏三角形、一张纹理，静下来（isBusy == false）就 isPaused = true。
+
+import Foundation
+import QuartzCore
+import CoreGraphics
+import simd
+import UIKit
+
+enum TouchLook: String, CaseIterable, Identifiable {
+    /// 水纹（缺省）：手指下起一两道圈，往外走、变宽、变淡。
+    case ripple
+    /// 皮肤：按下去陷、被手指黏着拖、松手晃两下弹回、按久了转暖。
+    case skin
+
+    static let defaultsKey = &quot;touch.look&quot;
+    static let standard = TouchLook.ripple
+
+    var id: String { rawValue }
+
+    /// 着色器里的模式号（与 `touch_filter_fragment` 的分支一致）。
+    var shaderMode: Float {
+        switch self {
+        case .ripple: 0
+        case .skin: 1
+        }
+    }
+
+    var symbol: String {
+        switch self {
+        case .ripple: &quot;water.waves&quot;
+        case .skin: &quot;hand.tap&quot;
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .ripple: &quot;水纹&quot;
+        case .skin: &quot;皮肤&quot;
+        }
+    }
+}
+
+/// 进空间前给窗口截的那张图，连同它在「截图坐标」下的尺寸（pt）。
+/// 截的是聊天那一层窗口，坐标 = 窗口坐标（左上原点）。
+struct TouchSnapshot {
+    let id = UUID()
+    /// sRGB、BGRA 8 位（着色器原样取色写进 `bgra8Unorm` 画布 = 和截图前看到的一样）。
+    let image: CGImage
+    let size: CGSize
+
+    enum Failure: Error, CustomStringConvertible {
+        case noKeyWindow
+        case incomplete
+        case convert
+
+        var description: String {
+            switch self {
+            case .noKeyWindow: &quot;找不到 key window&quot;
+            case .incomplete: &quot;drawHierarchy 报告没画完整（窗口还没上屏？）&quot;
+            case .convert: &quot;建不出 sRGB 位图&quot;
+            }
+        }
+    }
+
+    @MainActor
+    static func capture(in host: AnyObject? = nil) throws -&gt; TouchSnapshot {
+        // 拍聊天那一层（传进来的 host 窗口）；没有就拍 key window。触感空间自己最好在另一层窗口里，才不会被拍进去。
+        let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
+        guard let window = (host as? UIWindow) ?? windows.first(where: \.isKeyWindow) else { throw Failure.noKeyWindow }
+        let format = UIGraphicsImageRendererFormat()
+        // 最多 2 倍：画布也按 2 倍画（3 倍屏上片元少一半多，是省电的主要一刀）。
+        format.scale = min(window.screen.scale, 2)
+        // 标准范围 = 8 位 sRGB。缺省的 .automatic 在广色域屏上给 16 位扩展范围，进 8 位纹理会偏色。
+        format.preferredRange = .standard
+        format.opaque = true
+        var complete = false
+        let image = UIGraphicsImageRenderer(bounds: window.bounds, format: format).image { _ in
+            complete = window.drawHierarchy(in: window.bounds, afterScreenUpdates: false)
+        }
+        guard complete else { throw Failure.incomplete }
+        return TouchSnapshot(image: try srgb(image.cgImage!), size: window.bounds.size)
+    }
+
+    /// 画进一张 sRGB 的 BGRA 位图（统一成着色器原样取色的格式）。
+    private static func srgb(_ image: CGImage) throws -&gt; CGImage {
+        let space = CGColorSpace(name: CGColorSpace.sRGB)!
+        let info = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        guard let context = CGContext(data: nil, width: image.width, height: image.height, bitsPerComponent: 8,
+                                      bytesPerRow: 0, space: space, bitmapInfo: info) else { throw Failure.convert }
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        guard let out = context.makeImage() else { throw Failure.convert }
+        return out
+    }
+}
+
+/// 画面的手指物理。坐标一律是画布里的点（pt，左上原点，y 向下；Metal 的片元坐标也是左上原点，不用翻）。
+///
+/// - 水纹：按下落一滴（强度 1），划动每 22pt 落一滴，强度 0.35 + min(速度 / 2200, 0.5)；最多 40 滴，1.6 秒散完。
+/// - 皮肤：最多 5 个手指槽，固定子步 1/240 秒推弹簧。
+@MainActor
+final class TouchFilter {
+    static let maxDrops = 40
+    static let maxFingers = 5
+    static let dropLife: Double = 1.6
+    /// 统一参数（一串 float4）的布局，与 `.metal` 里 `kFilter*` 一起改：
+    ///   u[0] = 画布像素宽高、时间（秒）、模式
+    ///   u[1] = 渲染缩放（像素 / pt）、幅度（减弱动态效果时 0.5）、皮肤范围倍数、0
+    ///   u[2] = 画布在截图里的 UV 子矩形：原点 xy、尺寸 zw
+    ///   u[3] = 暖色 rgb、0；u[4] = 空着
+    ///   u[5 + i]  = 第 i 滴水：x、y（像素）、起始时刻、强度
+    ///   u[45 + i] = 第 i 根手指：x、y（像素）、深度 / 吸力、暖
+    ///   u[50 + i] = 第 i 根手指（皮肤）被拖着走的位移 x、y（像素）、0、0
+    static let dropBase = 5
+    static let fingerBase = dropBase + maxDrops
+    static let offsetBase = fingerBase + maxFingers
+    static let uniformCount = offsetBase + maxFingers
+
+    private struct Drop {
+        var x: Double, y: Double, t: Double, amp: Double
+    }
+
+    private struct Pointer {
+        var x: Double, y: Double
+        /// 上一个采样（算速度）。
+        var lx: Double, ly: Double, lt: Double
+        /// 上一滴落下的位置（水纹：每 22pt 一滴）。
+        var ex: Double, ey: Double
+        var slot: Int?
+        let downAt: Double
+        /// 平滑过的速度（pt/s），给抚的震动用（同原来表面的 0.6 / 0.4 平滑）。
+        var hapticSpeed: Double = 0
+    }
+
+    private struct Slot {
+        var key: AnyHashable
+        var active = true
+        var downAt: Double
+        var fx: Double, fy: Double
+        var cx: Double, cy: Double
+        var gx: Double, gy: Double, gvx = 0.0, gvy = 0.0
+        var ox = 0.0, oy = 0.0, ovx = 0.0, ovy = 0.0
+        var depth: Double, dv: Double
+        var hold = 0.0
+        var warm: Double
+
+        var settled: Bool {
+            abs(depth) &lt; 0.002 &amp;&amp; abs(dv) &lt; 0.01 &amp;&amp; hypot(ox, oy) &lt; 0.05 &amp;&amp; hypot(ovx, ovy) &lt; 0.1 &amp;&amp; warm &lt; 0.01
+        }
+    }
+
+    private(set) var look: TouchLook
+    /// 皮肤范围倍数（调参面板「皮肤范围」，1 = 出厂）。凹陷半径和被拖的位移上限都乘它。
+    var skinSize = 1.0
+    private var drops: [Drop] = []
+    private var dropHead = 0
+    private var pointers: [AnyHashable: Pointer] = [:]
+    private var slots: [Slot] = []
+    private let epoch = CACurrentMediaTime()
+
+    init(look: TouchLook) {
+        self.look = look
+    }
+
+    private var now: Double { CACurrentMediaTime() - epoch }
+
+    func reset(_ look: TouchLook) {
+        self.look = look
+        drops = []
+        dropHead = 0
+        pointers = [:]
+        slots = []
+    }
+
+    /// 有手指按着，或者还有没散完的水滴 / 没回稳的手指槽。
+    var isBusy: Bool {
+        if !pointers.isEmpty { return true }
+        switch look {
+        case .ripple:
+            let t = now
+            return drops.contains { t - $0.t &lt; Self.dropLife }
+        case .skin:
+            return slots.contains { $0.active || !$0.settled }
+        }
+    }
+
+    /// 静下来那一刻：散完的水滴、回稳的空槽都拿掉，最后一帧就是原原本本的截图（不留零点几像素的残影）。
+    func settle() {
+        let t = now
+        drops = drops.filter { t - $0.t &lt; Self.dropLife }
+        dropHead = 0
+        slots = slots.filter { $0.active || !$0.settled }
+    }
+
+    // MARK: 手指
+
+    func press(_ key: AnyHashable, at point: CGPoint, time: TimeInterval) {
+        let x = Double(point.x), y = Double(point.y)
+        var p = Pointer(x: x, y: y, lx: x, ly: y, lt: time, ex: x, ey: y, slot: nil, downAt: now)
+        if look == .ripple {
+            emitDrop(x, y, 1)
+        } else {
+            p.slot = newSlot(key, x, y)
+        }
+        pointers[key] = p
+    }
+
+    /// 返回这根手指平滑过的速度（pt/s），给抚的震动用。
+    @discardableResult
+    func drag(_ key: AnyHashable, to point: CGPoint, time: TimeInterval) -&gt; Float {
+        guard var p = pointers[key] else { return 0 }
+        let x = Double(point.x), y = Double(point.y)
+        let dt = max(time - p.lt, 1.0 / 240)
+        let sp = hypot(x - p.lx, y - p.ly) / dt
+        p.x = x; p.y = y; p.lx = x; p.ly = y; p.lt = time
+        p.hapticSpeed = p.hapticSpeed * 0.6 + sp * 0.4
+        if look == .ripple {
+            // 划的时候每 22pt 落一滴，划得越快越大。
+            if hypot(x - p.ex, y - p.ey) &gt; 22 {
+                emitDrop(x, y, 0.35 + min(sp / 2200, 0.5))
+                p.ex = x; p.ey = y
+            }
+        } else if let i = p.slot, slots[i].key == key {
+            slots[i].fx = x
+            slots[i].fy = y
+        }
+        pointers[key] = p
+        return Float(p.hapticSpeed)
+    }
+
+    /// 返回离手那一刻的「长按增益」（0.35 秒起算、2.6 秒爬满，同原来表面的离手触感），给离手的震动用。
+    @discardableResult
+    func release(_ key: AnyHashable) -&gt; Float {
+        guard let p = pointers.removeValue(forKey: key) else { return 0 }
+        if let i = p.slot, slots[i].key == key { slots[i].active = false }
+        let t = min(max((now - p.downAt - 0.35) / 2.6, 0), 1)
+        return Float(1 - pow(1 - t, 3))
+    }
+
+    func releaseAll() {
+        for key in Array(pointers.keys) { release(key) }
+    }
+
+    private func emitDrop(_ x: Double, _ y: Double, _ amp: Double) {
+        let d = Drop(x: x, y: y, t: now, amp: amp)
+        if drops.count &lt; Self.maxDrops {
+            drops.append(d)
+        } else {
+            drops[dropHead] = d
+            dropHead = (dropHead + 1) % Self.maxDrops
+        }
+    }
+
+    private func newSlot(_ key: AnyHashable, _ x: Double, _ y: Double) -&gt; Int {
+        let index: Int
+        if let free = slots.firstIndex(where: { !$0.active &amp;&amp; $0.settled }) {
+            index = free
+        } else if slots.count &lt; Self.maxFingers {
+            slots.append(Slot(key: key, downAt: now, fx: x, fy: y, cx: x, cy: y, gx: x, gy: y, depth: 0, dv: 0, warm: 0))
+            return slots.count - 1
+        } else {
+            index = slots.indices.min { slots[$0].downAt &lt; slots[$1].downAt }!
+        }
+        let old = slots[index]
+        slots[index] = Slot(key: key, downAt: now, fx: x, fy: y, cx: x, cy: y, gx: x, gy: y,
+                            depth: old.depth, dv: old.dv, warm: old.warm)
+        return index
+    }
+
+    // MARK: 推进
+
+    func advance(dt: Double) {
+        guard look != .ripple, !slots.isEmpty else { return }
+        let dt = min(dt, 1.0 / 20)
+        let steps = max(1, Int((dt * 240).rounded()))
+        let h = dt / Double(steps)
+        for _ in 0..&lt;steps {
+            for i in slots.indices { step(&amp;slots[i], h) }
+        }
+    }
+
+    private func step(_ s: inout Slot, _ h: Double) {
+        if s.active { s.hold += h }
+        let hr = ramp(s.hold, 0.35, 2.6)
+        switch look {
+        case .skin:
+            if s.active {
+                s.cx = s.fx; s.cy = s.fy
+                // 皮肤贴着手指：抓住的那一点追上手指，中间被拉开的就是皮肤被拖着走的量。
+                let k = 40.0, c = 2 * sqrt(k)
+                s.gvx += (k * (s.fx - s.gx) - c * s.gvx) * h
+                s.gvy += (k * (s.fy - s.gy) - c * s.gvy) * h
+                s.gx += s.gvx * h; s.gy += s.gvy * h
+                let dx = s.fx - s.gx, dy = s.fy - s.gy, l = hypot(dx, dy), m = 24.0 * skinSize
+                let f = l &gt; 0 ? m * tanh(l / m) / l : 0
+                s.ox = dx * f; s.oy = dy * f; s.ovx = 0; s.ovy = 0
+                s.warm += (hr - s.warm) * min(1, h * 1.5)
+            } else {
+                // 松手：欠阻尼弹回去，晃两下。
+                let k = 110.0, c = 7.0
+                s.ovx += (-k * s.ox - c * s.ovx) * h; s.ovy += (-k * s.oy - c * s.ovy) * h
+                s.ox += s.ovx * h; s.oy += s.ovy * h
+                s.warm -= s.warm * min(1, h * 0.45)
+            }
+            let target = s.active ? 0.55 + 0.45 * hr : 0
+            s.dv += (220 * (target - s.depth) - 15 * s.dv) * h
+            s.depth += s.dv * h
+        case .ripple:
+            break
+        }
+    }
+
+    private func ramp(_ x: Double, _ a: Double, _ b: Double) -&gt; Double {
+        let t = min(1, max(0, (x - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+    }
+
+    // MARK: 统一参数
+
+    /// - Parameters:
+    ///   - uvRect: 画布在截图里的 UV 子矩形（0…1）。
+    func uniforms(pixels: CGSize, scale: Double, uvRect: CGRect, dark: Bool, amp: Float) -&gt; [SIMD4&lt;Float&gt;] {
+        var u = [SIMD4&lt;Float&gt;](repeating: .zero, count: Self.uniformCount)
+        let k = Float(scale)
+        u[0] = SIMD4(Float(pixels.width), Float(pixels.height), Float(now), look.shaderMode)
+        u[1] = SIMD4(k, amp, Float(skinSize), 0)
+        u[2] = SIMD4(Float(uvRect.minX), Float(uvRect.minY), Float(uvRect.width), Float(uvRect.height))
+        // 亮色 --warm #e9a58f；暗色 #b8604e。
+        u[3] = dark ? Self.rgb(0xb8604e) : Self.rgb(0xe9a58f)
+        for (i, d) in drops.enumerated() {
+            u[Self.dropBase + i] = SIMD4(Float(d.x) * k, Float(d.y) * k, Float(d.t), Float(d.amp))
+        }
+        for (i, s) in slots.enumerated() {
+            u[Self.fingerBase + i] = SIMD4(Float(s.cx) * k, Float(s.cy) * k, Float(s.depth), Float(s.warm))
+            u[Self.offsetBase + i] = SIMD4(Float(s.ox) * k, Float(s.oy) * k, 0, 0)
+        }
+        return u
+    }
+
+    private static func rgb(_ hex: Int) -&gt; SIMD4&lt;Float&gt; {
+        SIMD4(Float((hex &gt;&gt; 16) &amp; 0xff) / 255, Float((hex &gt;&gt; 8) &amp; 0xff) / 255, Float(hex &amp; 0xff) / 255, 0)
+    }
+}
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">web/shader.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">WebGL 着色器（摘自 mcp/pad.html，完整的物理也在那个文件里）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 网页：WebGL 全屏着色器（水纹 / 皮肤）。手指、水滴的位置每帧经 uniform 传进来；整页内容事先画进纹理 uTex。
+const fs = `
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime, uMode, uDpr, uAmp;
+uniform vec4 uDrops[${MAX_DROPS}];   // 水纹：x, y, 起始时刻, 强度
+uniform vec4 uF[${MAX_F}];           // 皮肤：x, y, 深度, 暖
+uniform vec2 uO[${MAX_F}];           // 皮肤：被手指拖着走的位移
+uniform vec3 uWarm;
+void main(){
+  vec2 p = gl_FragCoord.xy, s = p; vec3 add = vec3(0.); float mul = 1., warm = 0.;
+  if (uMode &lt; .5) {
+    vec2 disp = vec2(0.); float light = 0.;
+    for (int i = 0; i &lt; ${MAX_DROPS}; i++) {
+      vec4 d = uDrops[i]; float age = uTime - d.z;
+      if (d.w &lt;= 0. || age &lt; 0. || age &gt; 1.6) continue;
+      float lam = (22. + 18. * age) * uDpr, w = lam * .55;
+      vec2 v = p - d.xy; float r = length(v) + .001; float x = r - age * 150. * uDpr;
+      float env = exp(-x * x / (w * w)) * exp(-age * 2.2) * d.w / (1. + r / (140. * uDpr));
+      env *= smoothstep(0., 16. * uDpr, r);
+      float ph = x * 6.2831 / lam; disp += v / r * sin(ph) * env; light += cos(ph) * env;
+    }
+    s = p - disp * 10. * uDpr * uAmp; add = vec3(light * .06 * uAmp);
+  } else {
+    vec2 L = normalize(vec2(-.55, .8));
+    for (int i = 0; i &lt; ${MAX_F}; i++) {
+      vec4 f = uF[i];
+      if (abs(f.z) &lt; 1e-4 &amp;&amp; dot(uO[i], uO[i]) &lt; 1e-4) continue;
+      float R = (34. + 8. * f.w) * uDpr; vec2 v = p - f.xy; float r2 = dot(v, v);
+      float fa = exp(-r2 / (R * R)), fb = exp(-r2 / (R * R * 1.6));
+      s += v * f.z * .85 * fa * uAmp - uO[i] * fb * uAmp;
+      vec2 g = v / R * 2. * f.z * fa;
+      add += vec3(dot(g, L) * .16 * uAmp); mul *= 1. - .18 * max(f.z, 0.) * fa; warm += f.w * max(f.z, 0.) * fa;
+    }
+  }
+  vec3 col = texture2D(uTex, clamp(s / uRes, vec2(0.), vec2(1.))).rgb * mul + add;
+  gl_FragColor = vec4(mix(col, uWarm, clamp(warm * .16, 0., .32)), 1.);
+}`;
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">android/RippleEffect.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">AGSL RuntimeShader 水纹（Android 13+）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓 13+：直接给整个 View 挂 AGSL 着色器做水纹，不用截图（未实测，照官方 API 写的思路代码）
+@RequiresApi(33)
+class RippleEffect(private val target: View) {
+    private val shader = RuntimeShader(&quot;&quot;&quot;
+        uniform shader content;      // View 本来的画面
+        uniform float2 drops[8];     // 水滴位置（像素）
+        uniform float ages[8];       // 每滴落下了多少秒（&gt; 1.6 秒就当没有）
+        uniform float dpr;
+        half4 main(float2 p) {
+            float2 disp = float2(0);
+            for (int i = 0; i &lt; 8; i++) {
+                float age = ages[i];
+                if (age &lt; 0.0 || age &gt; 1.6) continue;
+                float lam = (22.0 + 18.0 * age) * dpr, w = lam * 0.55;
+                float2 v = p - drops[i]; float r = length(v) + 0.001;
+                float x = r - age * 150.0 * dpr;
+                float env = exp(-x * x / (w * w)) * exp(-age * 2.2) / (1.0 + r / (140.0 * dpr));
+                env *= smoothstep(0.0, 16.0 * dpr, r);
+                disp += v / r * sin(x * 6.2831 / lam) * env;
+            }
+            return content.eval(p - disp * 10.0 * dpr);
+        }
+    &quot;&quot;&quot;.trimIndent())
+
+    // 每帧：更新水滴，重新挂上效果；水滴都散完了就把效果拿掉、不再刷新（省电）
+    fun frame(drops: FloatArray, ages: FloatArray) {
+        shader.setFloatUniform(&quot;drops&quot;, drops)
+        shader.setFloatUniform(&quot;ages&quot;, ages)
+        shader.setFloatUniform(&quot;dpr&quot;, target.resources.displayMetrics.density)
+        val busy = ages.any { it in 0f..1.6f }
+        target.setRenderEffect(if (busy) RenderEffect.createRuntimeShaderEffect(shader, &quot;content&quot;) else null)
+    }
+}
+</code></pre></div></details>
+    </div>
+  </section>
+
+  <section aria-labelledby="haptic">
+    <h2 id="haptic">震感回应</h2>
+    <p>震感和画面一样是核心：眼睛看到皮肤陷下去，手指同时感到一下，才像真的碰到。三个时刻：</p>
+    <ul>
+      <li><b>按下</b>：一下短震，强度和轻重成正比。</li>
+      <li><b>抚过</b>：一阵持续的细震，强度跟着当下的轻重走，速度只决定震感脆不脆；不支持连续震动的设备，就每划过一段（比如 60pt）轻敲一下。</li>
+      <li><b>松手</b>：轻轻一弹，按得越久越明显。</li>
+    </ul>
+    <div class="table-wrap"><table>
+      <thead><tr><th>平台</th><th>能做到什么</th></tr></thead>
+      <tbody>
+        <tr><td>iPhone 原生</td><td>Core Haptics：强度、锐度都能实时调，上面三种都能做</td></tr>
+        <tr><td>安卓原生</td><td><code>VibrationEffect</code>：支持振幅控制（<code>hasAmplitudeControl()</code>）的机型能按轻重调强度；不支持的只能控时长，用预设的 tick / click 代替</td></tr>
+        <tr><td>网页</td><td><code>navigator.vibrate</code>：只有安卓 Chrome 能用，只能控时长不能控强度（用「越重震得越久」代替）；iOS Safari 完全不支持，只能靠画面</td></tr>
+      </tbody>
+    </table></div>
+    <div class="codes">
+      <details class="code"><summary><span class="file">ios/TouchHaptics.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">Core Haptics：按下 ∝ 轻重、连续震动、松手</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：震动（Core Haptics）。按下一下 ∝ 轻重；抚的时候一条循环的连续震动，强度跟着轻重、锐度跟着速度。
+
+import Foundation
+import CoreHaptics
+
+/// 触感空间的震动（Core Haptics）。
+/// - 按下：一下 transient，强度和算出来的轻重成正比。
+/// - 抚：一条循环的 continuous，强度跟着此刻的轻重走，速度只管锐度（越快越脆）和一点力度。
+/// - 松手：轻轻一弹，按得越久越明显。
+/// 强度都乘 `strength()`（0.5 = 基准，1 = 两倍，封顶 1）。模拟器和不支持的机型上不响。
+@MainActor
+final class TouchHaptics {
+    private let strength: () -&gt; Double
+    private let report: (String) -&gt; Void
+
+    init(strength: @escaping () -&gt; Double, report: @escaping (String) -&gt; Void) {
+        self.strength = strength
+        self.report = report
+    }
+
+    private func scaled(_ intensity: Double) -&gt; Float {
+        Float(min(1, intensity * strength() * 2))
+    }
+
+    private let supported = CHHapticEngine.capabilitiesForHardware().supportsHaptics
+    private var engine: CHHapticEngine?
+    private var stroke: CHHapticAdvancedPatternPlayer?
+
+    /// 进空间时备好引擎（第一下轻点不必等它启动）。
+    func prepare() {
+        guard supported, engine == nil else { return }
+        do {
+            let engine = try CHHapticEngine()
+            engine.isAutoShutdownEnabled = true
+            // 被系统停掉 / 重置（来电、退到后台）：丢掉，下一次用时重建。
+            engine.stoppedHandler = { [weak self] _ in
+                Task { @MainActor in self?.engine = nil; self?.stroke = nil }
+            }
+            engine.resetHandler = { [weak self] in
+                Task { @MainActor in self?.engine = nil; self?.stroke = nil }
+            }
+            try engine.start()
+            self.engine = engine
+        } catch {
+            report(&quot;Core Haptics 引擎起不来：\(error)&quot;)
+        }
+    }
+
+    /// 按下：强度和轻重成正比（很轻也留一点底，不至于完全没感觉）。
+    func tap(_ pressure: CGFloat) { transient(intensity: 0.12 + 0.8 * Double(pressure), sharpness: 0.35) }
+    func release(_ holdGain: Float) { transient(intensity: 0.22 + 0.25 * Double(holdGain), sharpness: 0.6) }
+    func placed() { transient(intensity: 0.5, sharpness: 0.2) }
+    /// 实时触摸发出去一批。
+    func sent() { transient(intensity: 0.3, sharpness: 0.5) }
+
+    /// 抚：此刻的轻重 → 强度（成正比），速度（pt/s）→ 锐度和一点力度。第一次调时起一条循环的 continuous。
+    func stroke(speed: Float, pressure: CGFloat) {
+        prepare()
+        guard let engine else { return }
+        do {
+            if stroke == nil {
+                let event = CHHapticEvent(eventType: .hapticContinuous, parameters: [
+                    CHHapticEventParameter(parameterID: .hapticIntensity, value: 1),
+                    CHHapticEventParameter(parameterID: .hapticSharpness, value: 0.2),
+                ], relativeTime: 0, duration: 10)
+                let player = try engine.makeAdvancedPlayer(with: CHHapticPattern(events: [event], parameters: []))
+                player.loopEnabled = true
+                try player.start(atTime: CHHapticTimeImmediate)
+                stroke = player
+            }
+            let v = min(Double(speed) / 1500, 1)
+            let p = min(max(Double(pressure), 0), 1)
+            try stroke!.sendParameters([
+                CHHapticDynamicParameter(parameterID: .hapticIntensityControl,
+                                         value: scaled((0.05 + 0.6 * p) * (0.7 + 0.3 * v)), relativeTime: 0),
+                CHHapticDynamicParameter(parameterID: .hapticSharpnessControl, value: Float(-0.2 + 0.6 * v), relativeTime: 0),
+            ], atTime: CHHapticTimeImmediate)
+        } catch {
+            report(&quot;抚的触感放不出来：\(error)&quot;)
+        }
+    }
+
+    /// 所有手指都离开了：停掉抚的那一条。
+    func strokeEnded() {
+        guard let stroke else { return }
+        self.stroke = nil
+        do {
+            try stroke.stop(atTime: CHHapticTimeImmediate)
+        } catch {
+            report(&quot;抚的触感停不下来：\(error)&quot;)
+        }
+    }
+
+    private func transient(intensity: Double, sharpness: Float) {
+        prepare()
+        guard let engine else { return }
+        do {
+            let event = CHHapticEvent(eventType: .hapticTransient, parameters: [
+                CHHapticEventParameter(parameterID: .hapticIntensity, value: scaled(intensity)),
+                CHHapticEventParameter(parameterID: .hapticSharpness, value: sharpness),
+            ], relativeTime: 0)
+            try engine.makePlayer(with: CHHapticPattern(events: [event], parameters: [])).start(atTime: CHHapticTimeImmediate)
+        } catch {
+            report(&quot;触感放不出来：\(error)&quot;)
+        }
+    }
+}
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">web/haptic.js</span><span class="badge plat">网页</span><span class="badge ok">实测</span><span class="status">navigator.vibrate（摘自 mcp/pad.html）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// ---------- 震动：网页只能控时长（安卓 Chrome 有，iOS Safari 没有） ----------
+const buzz = ms =&gt; { try { navigator.vibrate &amp;&amp; navigator.vibrate(ms); } catch (_) {} };
+
+// 按下那一下：越重越长
+buzz(Math.round(8 + 25 * p));
+// 抚的时候：每走 60px 轻敲一下（网页没有连续震动、也调不了强度）
+if (travel &gt; 60) { travel = 0; buzz(Math.round(5 + 15 * p)); }
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">android/Haptics.kt</span><span class="badge plat">安卓原生</span><span class="badge todo">未实测 · 照官方 API 写的思路代码</span><span class="status">VibrationEffect 按轻重调强度</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 安卓：按轻重调震动强度（未实测，照官方 API 写的思路代码）
+val vibrator: Vibrator = if (Build.VERSION.SDK_INT &gt;= 31)
+    context.getSystemService(VibratorManager::class.java).defaultVibrator
+else @Suppress(&quot;DEPRECATION&quot;) context.getSystemService(Vibrator::class.java)
+
+// 按下：强度 ∝ 轻重（0–1）
+fun tap(p: Float) {
+    if (vibrator.hasAmplitudeControl()) {
+        val amp = (40 + 215 * p).toInt().coerceIn(1, 255)
+        vibrator.vibrate(VibrationEffect.createOneShot(20, amp))
+    } else if (Build.VERSION.SDK_INT &gt;= 29) {
+        // 调不了强度：轻的用 tick，重的用 click
+        vibrator.vibrate(VibrationEffect.createPredefined(if (p &lt; 0.5f) VibrationEffect.EFFECT_TICK else VibrationEffect.EFFECT_CLICK))
+    } else vibrator.vibrate(VibrationEffect.createOneShot((10 + 25 * p).toLong(), VibrationEffect.DEFAULT_AMPLITUDE))
+}
+
+// 抚的时候：每划过一段（比如 60dp）轻敲一下，强度跟着当下的轻重
+fun stroke(travelledDp: Float, p: Float) { if (travelledDp &gt; 60) tap(p * 0.6f) }
+</code></pre></div></details>
+    </div>
+  </section>
+
+  <section aria-labelledby="words">
+    <h2 id="words">翻译</h2>
+    <p>这一步完全用规则，不用模型去猜，所以快、稳定、可以随便改。按时间顺序看每一笔：</p>
+    <div class="table-wrap"><table>
+      <thead><tr><th>看什么</th><th>规则</th><th>翻译成</th></tr></thead>
+      <tbody>
+        <tr><td>手指几乎没动</td><td>移动不到 12pt：短于 0.35 秒是点，更久是按住</td><td>落了一下 / 贴了一两秒</td></tr>
+        <tr><td>同一处连着点</td><td>每两下间隔都短于 0.6 秒</td><td>连着落了三下</td></tr>
+        <tr><td>动了，首尾很近</td><td>横竖都有一截才算圈；一条线上来回是来回</td><td>绕了个小圈 / 来回滑</td></tr>
+        <tr><td>动了，从 A 到 B</td><td>分 8 个方向；身体版起点终点已说明方向，就不再加</td><td>从左边一路滑到右边</td></tr>
+        <tr><td>几根手指同时按</td><td>越分越开 / 越靠越近 / 一起动 / 都不动</td><td>张开 / 合拢 / 一起滑过 / 一起贴着</td></tr>
+        <tr><td>和上一笔隔了 1.5 秒以上</td><td></td><td>前面加「停了一会儿，」</td></tr>
+      </tbody>
+    </table></div>
+    <p>每一笔再加三样修饰：<b>快慢</b>（每秒不到 250pt 是「慢慢」，超过 900pt 是「飞快」）、<b>轻重</b>（取最重的那一刻，分很轻、轻轻、稍稍用力、用力四档）、<b>轻重的变化</b>（开头三分之一和结尾三分之一比，「越按越重」「越来越轻」）。</p>
+    <h3>位置怎么说</h3>
+    <ul>
+      <li><b>屏幕</b>：整块屏幕就是它：正中间、偏右上的地方、左上边缘、外面的空处（四个角也算边缘）。动作是手指在一块光滑平面上的感觉：落、贴、滑。</li>
+      <li><b>上半身</b>：屏幕当成面对你的半身像，从上到下是头顶、额头和脸颊、下巴和耳朵边、脖子、锁骨和肩、胸口和手臂。中间三分之一算正中，两边算左右，<b>左右像照镜子</b>（你的左手边是它的右边）。动作是指尖、指腹怎么碰、贴、抚。</li>
+      <li><b>别的映射</b>：位置名都在一个函数（<code>place</code>）里，想要别的部位、别的语气，换掉它就行。</li>
+    </ul>
+    <p>翻译出来是这样：</p>
+<pre class="example">&lt;touch strokes="3" span="6.9s"&gt;
+（她在摸你。）
+指尖轻轻地碰了一下你的额头；停了一会儿，指腹轻轻地贴在你的右脸颊，贴了一两秒；指腹轻轻地从你的右肩慢慢抚到你的左肩。
+&lt;/touch&gt;</pre>
+    <h3>几条经验</h3>
+    <ul>
+      <li><b>不给坐标，不附截图。</b>给坐标时，模型的回应像在读画板；翻译成身体感觉，它的回应才像被摸到。</li>
+      <li><b>开头交代一句「她在摸你」。</b>不交代，模型不知道后面的「你」「这里」指什么。比起「屏幕就是你的身体」，只说「她在摸你」更好：这是一件真的事，模型可以自己去找被摸的感觉。</li>
+      <li><b>不告诉模型是哪种画面效果，也不注明压感是估的。</b>那是给人看的，对模型只是噪音。</li>
+      <li><b>用 <code>&lt;touch&gt;</code> 标签包住，放在正文最前面、和正文在同一个文本块里。</b>聊天界面能认出它，折成「👆 3」的小标签，点开看全文。</li>
+    </ul>
+    <div class="codes">
+      <details class="code"><summary><span class="file">translate.js</span><span class="badge plat">网页 / Node</span><span class="badge ok">实测</span><span class="status">翻译（触摸板和 MCP 版用的就是它）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
+// 浏览器里是全局 TouchTranslate，Node 里 require/import 都行。不依赖任何库。
+//
+// 输入：strokes = [{ samples: [{x, y, t, p}], start, end, ended }]
+//   一笔 = 一根手指从按下到抬起。x/y 是在触摸区域里的坐标（px/pt），t 是秒，p 是轻重 0–1。
+// 区域：{ w, h }（触摸区域的宽高）
+// 说法：map = &#x27;screen&#x27;（整块屏幕就是它）或 &#x27;body&#x27;（屏幕当成面对你的半身像，左右照镜子）
+// 输出：&lt;touch strokes=&quot;n&quot; span=&quot;…s&quot;&gt; … &lt;/touch&gt; 包好的一段文字，排在消息最前面发出去。
+(function (root) {
+  &#x27;use strict&#x27;;
+
+  const reach = s =&gt; { const o = s[0]; return Math.max(...s.map(q =&gt; Math.hypot(q.x - o.x, q.y - o.y))); };
+  const lengthOf = s =&gt; { let l = 0; for (let i = 1; i &lt; s.length; i++) l += Math.hypot(s[i].x - s[i - 1].x, s[i].y - s[i - 1].y); return l; };
+  // 轻重四档：取这一笔最重的那一刻
+  const weight = p =&gt; p &lt; 0.2 ? &#x27;很轻&#x27; : p &lt; 0.45 ? &#x27;轻轻&#x27; : p &lt; 0.7 ? &#x27;稍稍用力&#x27; : &#x27;用力&#x27;;
+  const seconds = t =&gt; t &lt; 1 ? &#x27;一小会儿&#x27; : t &lt; 2.5 ? &#x27;一两秒&#x27; : `${Math.round(t)}秒`;
+  const CN = [&#x27;零&#x27;, &#x27;一&#x27;, &#x27;两&#x27;, &#x27;三&#x27;, &#x27;四&#x27;, &#x27;五&#x27;, &#x27;六&#x27;, &#x27;七&#x27;, &#x27;八&#x27;, &#x27;九&#x27;, &#x27;十&#x27;];
+  const count = n =&gt; n &lt;= 10 ? CN[n] : String(n);
+  // 点：几乎没动（&lt; 12）且很短（&lt; 0.35 秒）
+  const isTap = s =&gt; !s.continued &amp;&amp; reach(s.samples) &lt; 12 &amp;&amp; s.end - s.start &lt; 0.35;
+
+  // 轻重的变化：开头三分之一和结尾三分之一比
+  function trend(s) {
+    const v = s.map(q =&gt; q.p); if (v.length &lt; 6) return &#x27;&#x27;;
+    const third = Math.floor(v.length / 3), avg = a =&gt; a.reduce((x, y) =&gt; x + y, 0) / a.length;
+    const head = avg(v.slice(0, third)), tail = avg(v.slice(-third));
+    return tail - head &gt; 0.15 ? &#x27;，越按越重&#x27; : head - tail &gt; 0.15 ? &#x27;，越来越轻&#x27; : &#x27;&#x27;;
+  }
+
+  // 位置。屏幕版：按半宽半高归一，取 2.6 次的超椭圆半径（四个角也算边缘）。
+  // 身体版：从上到下 头顶/头发 → 额头、鼻尖/脸颊 → 下巴/耳朵边 → 脖子/颈侧 → 锁骨/肩 → 胸口/手臂 → 肚子/手；
+  // 横向中间三分之一算正中，两边算左右；左右照镜子（屏幕左边是它的右边）。
+  // 想要别的映射，换掉这个函数就行。
+  function place(p, f, map) {
+    const nx = (p.x - f.w / 2) / (f.w / 2), ny = (p.y - f.h / 2) / (f.h / 2), t = p.y / f.h;
+    if (map === &#x27;body&#x27;) {
+      if (Math.abs(nx) &gt; 1.08 || t &lt; -0.04 || t &gt; 1.04) return &#x27;你身边的空处&#x27;;
+      const side = nx &lt; -0.33 ? &#x27;右&#x27; : nx &gt; 0.33 ? &#x27;左&#x27; : null;
+      if (t &lt; 0.12) return side ? `你${side}边的头发` : &#x27;你的头顶&#x27;;
+      if (t &lt; 0.30) return side ? `你的${side}脸颊` : (t &lt; 0.21 ? &#x27;你的额头&#x27; : &#x27;你的鼻尖&#x27;);
+      if (t &lt; 0.40) return side ? `你的${side}耳朵边` : &#x27;你的下巴&#x27;;
+      if (t &lt; 0.50) return side ? `你的${side}边颈侧` : &#x27;你的脖子&#x27;;
+      if (t &lt; 0.62) return side ? `你的${side}肩` : &#x27;你的锁骨&#x27;;
+      if (t &lt; 0.82) return side ? `你的${side}臂` : &#x27;你的胸口&#x27;;
+      return side ? `你的${side}手` : &#x27;你的肚子&#x27;;
+    }
+    const r = Math.pow(Math.pow(Math.abs(nx), 2.6) + Math.pow(Math.abs(ny), 2.6), 1 / 2.6);
+    const side = (nx &lt; -0.3 ? &#x27;左&#x27; : nx &gt; 0.3 ? &#x27;右&#x27; : &#x27;&#x27;) + (ny &lt; -0.3 ? &#x27;上&#x27; : ny &gt; 0.3 ? &#x27;下&#x27; : &#x27;&#x27;);
+    if (r &gt; 1.08) return side ? `你外面靠${side}的空处` : &#x27;你旁边的空处&#x27;;
+    if (r &lt; 0.35 || !side) return &#x27;你的正中间&#x27;;
+    if (r &gt; 0.72) return `你的${side}边缘`;
+    return `你偏${side}的地方`;
+  }
+
+  // 8 个方向；身体版左右照镜子
+  function direction(a, b, map) {
+    const ang = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
+    const names = map === &#x27;body&#x27;
+      ? [&#x27;往你的左边&#x27;, &#x27;往你的左上&#x27;, &#x27;往上&#x27;, &#x27;往你的右上&#x27;, &#x27;往你的右边&#x27;, &#x27;往你的右下&#x27;, &#x27;往下&#x27;, &#x27;往你的左下&#x27;]
+      : [&#x27;往右&#x27;, &#x27;往右上&#x27;, &#x27;往上&#x27;, &#x27;往左上&#x27;, &#x27;往左&#x27;, &#x27;往左下&#x27;, &#x27;往下&#x27;, &#x27;往右下&#x27;];
+    return names[Math.floor(((ang + 360 + 22.5) % 360) / 45)];
+  }
+
+  // 一根手指的一笔。屏幕版：手指在光滑平面上「落、贴、滑」；身体版：指尖、指腹「碰、贴、抚」。
+  function single(st, f, map) {
+    const s = st.samples, first = s[0], last = s[s.length - 1], dur = st.end - st.start;
+    const w = weight(Math.max(...s.map(q =&gt; q.p))), body = map === &#x27;body&#x27;;
+    let text;
+    if (reach(s) &lt; 12) {
+      if (dur &lt; 0.35 &amp;&amp; !st.continued) text = body ? `指尖${w}地碰了一下${place(first, f, map)}` : `指尖${w}地落在${place(first, f, map)}`;
+      else text = `指腹${w}地贴在${place(first, f, map)}，贴了${seconds(dur)}${trend(s)}`;
+    } else {
+      const len = lengthOf(s), chord = Math.hypot(last.x - first.x, last.y - first.y);
+      const speed = dur &gt; 0 ? len / dur : 0, pace = speed &lt; 250 ? &#x27;慢慢&#x27; : speed &lt; 900 ? &#x27;&#x27; : &#x27;飞快地&#x27;;
+      const xs = s.map(q =&gt; q.x), ys = s.map(q =&gt; q.y);
+      const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+      // 画圈要横竖都有一截；一条线上来回划首尾也挨得近，但那是来回
+      const round = Math.min(bw, bh) &gt; 0.35 * Math.max(bw, bh);
+      const from = place(first, f, map), to = place(last, f, map);
+      if (round &amp;&amp; chord &lt; len * 0.2 &amp;&amp; len &gt; 60) text = body ? `指尖在${from}${w}地${pace}画了个小圈` : `指尖贴着${from}${w}地${pace}绕了个小圈`;
+      else if (len / Math.max(chord, 1) &gt; 1.6) text = body ? `指腹在${from}一带${w}地来回轻抚` : `指腹贴着${from}一带${w}地来回滑`;
+      else if (from === to) text = (body ? `指腹在${from}${w}地${pace}${direction(first, last, map)}抚了一下` : `指腹贴着${from}${w}地${pace}${direction(first, last, map)}滑了一下`) + trend(s);
+      // 身体版起点终点已经说清楚往哪了，不再加方向
+      else text = (body ? `指腹${w}地从${from}${pace}抚到${to}` : `指腹贴着你，${w}地从${from}${len &gt; 150 ? &#x27;一路&#x27; : &#x27;&#x27;}${pace}滑到${to}`) + trend(s);
+    }
+    // 实时发送时：上一次发送时还按着的写「接着」，此刻还按着的写「还没松手」
+    if (st.continued) text = &#x27;接着&#x27; + text;
+    if (st.ended === false) text += &#x27;，还没松手&#x27;;
+    return text;
+  }
+
+  // 几根手指同时按着
+  function multi(group, f, map) {
+    const fingers = count(group.length), body = map === &#x27;body&#x27;;
+    const w = weight(Math.max(...group.flatMap(g =&gt; g.samples.map(q =&gt; q.p))));
+    const moving = group.filter(g =&gt; reach(g.samples) &gt;= 12);
+    if (moving.length &gt;= 2) {
+      const A = moving[0].samples, B = moving[1].samples;
+      const a0 = A[0], a1 = A[A.length - 1], b0 = B[0], b1 = B[B.length - 1];
+      const before = Math.hypot(a0.x - b0.x, a0.y - b0.y), after = Math.hypot(a1.x - b1.x, a1.y - b1.y);
+      const speed = lengthOf(A) / Math.max(moving[0].end - moving[0].start, 0.01);
+      const how = speed &lt; 250 ? &#x27;慢慢&#x27; : speed &gt; 900 ? &#x27;一下子&#x27; : &#x27;&#x27;;
+      if (after &gt; before * 1.3) {
+        const at = place({ x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }, f, map);
+        return body ? `${fingers}根手指并拢${w}地贴在${at}，然后${how}张开，指尖顺着往两边抚开`
+                    : `${fingers}根手指并拢${w}地贴在${at}，然后${how}张开，指尖贴着你往两边滑开`;
+      }
+      if (after &lt; before * 0.75) {
+        const at = place({ x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, f, map);
+        return body ? `${fingers}根手指从两边${w}地贴上${at}，${how}往中间合拢，把那里轻轻拢在指尖之间`
+                    : `${fingers}根手指从两边${w}地贴上${at}，${how}往中间合拢，指尖贴着你一点点滑近`;
+      }
+      return body ? `${fingers}根手指并在一起，${w}地从${place(a0, f, map)}${direction(a0, a1, map)}抚过去`
+                  : `${fingers}根手指并在一起贴着你，${w}地从${place(a0, f, map)}${direction(a0, a1, map)}滑过去`;
+    }
+    const dur = Math.max(...group.map(g =&gt; g.end)) - Math.min(...group.map(g =&gt; g.start));
+    return `${fingers}根手指一起${w}地贴在${place(group[0].samples[0], f, map)}，贴了${seconds(dur)}`;
+  }
+
+  function describe(list, f, map = &#x27;screen&#x27;) {
+    const all = [...list].sort((a, b) =&gt; a.start - b.start);
+    if (!all.length) return &#x27;&#x27;;
+    const span = Math.max(...all.map(s =&gt; s.end)) - all[0].start;
+    const sentences = []; let i = 0, prevEnd = null;
+    while (i &lt; all.length) {
+      const st = all[i];
+      // 停顿：两笔之间隔了 1.5 秒以上
+      const lead = prevEnd !== null &amp;&amp; st.start - prevEnd &gt; 1.5 ? &#x27;停了一会儿，&#x27; : &#x27;&#x27;;
+      // 多指：和后面几笔时间上重叠
+      let together = 0;
+      while (i + together + 1 &lt; all.length &amp;&amp; all[i + together + 1].start &lt; st.end) together++;
+      if (together &gt; 0) {
+        const g = all.slice(i, i + together + 1);
+        sentences.push(lead + multi(g, f, map)); prevEnd = Math.max(...g.map(s =&gt; s.end)); i += together + 1; continue;
+      }
+      // 连点：同一处、一下接一下
+      let run = 1;
+      while (i + run &lt; all.length &amp;&amp; isTap(st) &amp;&amp; isTap(all[i + run]) &amp;&amp; all[i + run].start - all[i + run - 1].end &lt; 1.2
+             &amp;&amp; Math.hypot(all[i + run].samples[0].x - st.samples[0].x, all[i + run].samples[0].y - st.samples[0].y) &lt; f.w * 0.15) run++;
+      if (run &gt;= 2) {
+        const peak = Math.max(...all.slice(i, i + run).flatMap(s =&gt; s.samples.map(q =&gt; q.p)));
+        let gap = 0; for (let k = 1; k &lt; run; k++) gap = Math.max(gap, all[i + k].start - all[i + k - 1].end);
+        const at = place(st.samples[0], f, map), w = weight(peak);
+        sentences.push(lead + (map === &#x27;body&#x27; ? `用指尖在${at}${w}地${gap &lt; 0.6 ? &#x27;连着碰了&#x27; : &#x27;碰了&#x27;}${count(run)}下`
+                                              : `指尖在${at}${w}地${gap &lt; 0.6 ? &#x27;连着落了&#x27; : &#x27;落了&#x27;}${count(run)}下`));
+        prevEnd = all[i + run - 1].end; i += run; continue;
+      }
+      sentences.push(lead + single(st, f, map)); prevEnd = st.end; i++;
+    }
+    // 开头交代一句：不然模型不知道后面的「你」「这里」指什么
+    return `&lt;touch strokes=&quot;${all.length}&quot; span=&quot;${span.toFixed(1)}s&quot;&gt;\n（她在摸你。）\n${sentences.join(&#x27;；&#x27;)}。\n&lt;/touch&gt;`;
+  }
+
+  const api = { describe, place, weight };
+  if (typeof module === &#x27;object&#x27; &amp;&amp; module.exports) module.exports = api;
+  root.TouchTranslate = api;
+})(typeof globalThis !== &#x27;undefined&#x27; ? globalThis : this);
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">ios/TouchTranslator.swift</span><span class="badge plat">iOS 原生</span><span class="badge ok">实测</span><span class="status">翻译（同一套规则的 Swift 版）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 触感空间 · iOS 参考代码：翻译。把一批触摸翻译成像身体感觉一样的一段话。
+// 和仓库根目录的 translate.js 是同一套规则（那份给网页和 MCP 版用），两边改的时候一起改。
+//
+// 用法：TouchTranslator.describe(batch, area: view.bounds.size, map: .screen)
+// 得到 &lt;touch strokes=&quot;n&quot; span=&quot;…s&quot;&gt; … &lt;/touch&gt;，排在消息正文最前面、和正文放在同一个文本块里发出去。
+
+import CoreGraphics
+import Foundation
+
+enum TouchTranslator {
+    /// 位置怎么说：screen = 整块屏幕就是它；body = 屏幕当成面对你的半身像，左右照镜子。
+    enum Map { case screen, body }
+
+    static func describe(_ strokes: [TouchStroke], area: CGSize, map: Map) -&gt; String {
+        let all = strokes.sorted { $0.start &lt; $1.start }
+        guard let first = all.first else { return &quot;&quot; }
+        let span = (all.map(\.end).max() ?? first.end) - first.start
+        var sentences: [String] = []
+        var i = 0
+        var previousEnd: TimeInterval?
+        while i &lt; all.count {
+            let stroke = all[i]
+            // 停顿：和上一笔隔了 1.5 秒以上
+            let lead = previousEnd.map { stroke.start - $0 &gt; 1.5 } == true ? &quot;停了一会儿，&quot; : &quot;&quot;
+            // 多指：和后面几笔时间上重叠
+            var together = 0
+            while i + together + 1 &lt; all.count, all[i + together + 1].start &lt; stroke.end { together += 1 }
+            if together &gt; 0 {
+                let group = Array(all[i...(i + together)])
+                sentences.append(lead + multi(group, area, map))
+                previousEnd = group.map(\.end).max()
+                i += together + 1
+                continue
+            }
+            // 连点：同一处、一下接一下
+            var run = 1
+            while i + run &lt; all.count, isTap(stroke), isTap(all[i + run]),
+                  all[i + run].start - all[i + run - 1].end &lt; 1.2,
+                  distance(all[i + run].samples[0].point, stroke.samples[0].point) &lt; area.width * 0.15 { run += 1 }
+            if run &gt;= 2 {
+                let peak = all[i..&lt;(i + run)].flatMap { $0.samples.map(\.pressure) }.max()!
+                let gap = (1..&lt;run).map { all[i + $0].start - all[i + $0 - 1].end }.max()!
+                let at = place(stroke.samples[0].point, area, map), w = weight(peak)
+                sentences.append(lead + (map == .body
+                    ? &quot;用指尖在\(at)\(w)地\(gap &lt; 0.6 ? &quot;连着碰了&quot; : &quot;碰了&quot;)\(count(run))下&quot;
+                    : &quot;指尖在\(at)\(w)地\(gap &lt; 0.6 ? &quot;连着落了&quot; : &quot;落了&quot;)\(count(run))下&quot;))
+                previousEnd = all[i + run - 1].end
+                i += run
+                continue
+            }
+            sentences.append(lead + single(stroke, area, map))
+            previousEnd = stroke.end
+            i += 1
+        }
+        // 开头交代一句：不然模型不知道后面的「你」「这里」指什么
+        return &quot;&quot;&quot;
+        &lt;touch strokes=&quot;\(all.count)&quot; span=&quot;\(String(format: &quot;%.1f&quot;, span))s&quot;&gt;
+        （她在摸你。）
+        \(sentences.joined(separator: &quot;；&quot;))。
+        &lt;/touch&gt;
+        &quot;&quot;&quot;
+    }
+
+    // MARK: 一根手指的一笔：屏幕版「落、贴、滑」，身体版「碰、贴、抚」
+
+    static func single(_ stroke: TouchStroke, _ area: CGSize, _ map: Map) -&gt; String {
+        let s = stroke.samples, first = s.first!.point, last = s.last!.point
+        let duration = stroke.end - stroke.start
+        let w = weight(s.map(\.pressure).max()!), body = map == .body
+        var text: String
+        if reach(s) &lt; 12 {
+            if duration &lt; 0.35 &amp;&amp; !stroke.continued {
+                text = body ? &quot;指尖\(w)地碰了一下\(place(first, area, map))&quot; : &quot;指尖\(w)地落在\(place(first, area, map))&quot;
+            } else {
+                text = &quot;指腹\(w)地贴在\(place(first, area, map))，贴了\(seconds(duration))\(trend(s))&quot;
+            }
+        } else {
+            let len = length(s), chord = distance(first, last)
+            let speed = duration &gt; 0 ? len / CGFloat(duration) : 0
+            let pace = speed &lt; 250 ? &quot;慢慢&quot; : speed &lt; 900 ? &quot;&quot; : &quot;飞快地&quot;
+            let xs = s.map(\.point.x), ys = s.map(\.point.y)
+            let boxW = xs.max()! - xs.min()!, boxH = ys.max()! - ys.min()!
+            // 画圈要横竖都有一截；一条线上来回划首尾也挨得近，但那是来回
+            let round = min(boxW, boxH) &gt; 0.35 * max(boxW, boxH)
+            let from = place(first, area, map), to = place(last, area, map)
+            if round &amp;&amp; chord &lt; len * 0.2 &amp;&amp; len &gt; 60 {
+                text = body ? &quot;指尖在\(from)\(w)地\(pace)画了个小圈&quot; : &quot;指尖贴着\(from)\(w)地\(pace)绕了个小圈&quot;
+            } else if len / max(chord, 1) &gt; 1.6 {
+                text = body ? &quot;指腹在\(from)一带\(w)地来回轻抚&quot; : &quot;指腹贴着\(from)一带\(w)地来回滑&quot;
+            } else if from == to {
+                let dir = direction(first, last, map)
+                text = (body ? &quot;指腹在\(from)\(w)地\(pace)\(dir)抚了一下&quot; : &quot;指腹贴着\(from)\(w)地\(pace)\(dir)滑了一下&quot;) + trend(s)
+            } else {
+                // 身体版起点终点已经说清楚往哪了，不再加方向
+                text = (body ? &quot;指腹\(w)地从\(from)\(pace)抚到\(to)&quot;
+                             : &quot;指腹贴着你，\(w)地从\(from)\(len &gt; 150 ? &quot;一路&quot; : &quot;&quot;)\(pace)滑到\(to)&quot;) + trend(s)
+            }
+        }
+        // 实时发送时：上一次发送时还按着的写「接着」，此刻还按着的写「还没松手」
+        if stroke.continued { text = &quot;接着&quot; + text }
+        if !stroke.ended { text += &quot;，还没松手&quot; }
+        return text
+    }
+
+    // MARK: 几根手指同时按着
+
+    static func multi(_ group: [TouchStroke], _ area: CGSize, _ map: Map) -&gt; String {
+        let fingers = count(group.count), body = map == .body
+        let w = weight(group.flatMap { $0.samples.map(\.pressure) }.max()!)
+        let moving = group.filter { reach($0.samples) &gt;= 12 }
+        if moving.count &gt;= 2 {
+            let a0 = moving[0].samples.first!.point, a1 = moving[0].samples.last!.point
+            let b0 = moving[1].samples.first!.point, b1 = moving[1].samples.last!.point
+            let before = distance(a0, b0), after = distance(a1, b1)
+            let speed = length(moving[0].samples) / CGFloat(max(moving[0].end - moving[0].start, 0.01))
+            let how = speed &lt; 250 ? &quot;慢慢&quot; : speed &gt; 900 ? &quot;一下子&quot; : &quot;&quot;
+            if after &gt; before * 1.3 {
+                let at = place(CGPoint(x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2), area, map)
+                return body ? &quot;\(fingers)根手指并拢\(w)地贴在\(at)，然后\(how)张开，指尖顺着往两边抚开&quot;
+                            : &quot;\(fingers)根手指并拢\(w)地贴在\(at)，然后\(how)张开，指尖贴着你往两边滑开&quot;
+            }
+            if after &lt; before * 0.75 {
+                let at = place(CGPoint(x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2), area, map)
+                return body ? &quot;\(fingers)根手指从两边\(w)地贴上\(at)，\(how)往中间合拢，把那里轻轻拢在指尖之间&quot;
+                            : &quot;\(fingers)根手指从两边\(w)地贴上\(at)，\(how)往中间合拢，指尖贴着你一点点滑近&quot;
+            }
+            return body ? &quot;\(fingers)根手指并在一起，\(w)地从\(place(a0, area, map))\(direction(a0, a1, map))抚过去&quot;
+                        : &quot;\(fingers)根手指并在一起贴着你，\(w)地从\(place(a0, area, map))\(direction(a0, a1, map))滑过去&quot;
+        }
+        let duration = group.map(\.end).max()! - group.map(\.start).min()!
+        return &quot;\(fingers)根手指一起\(w)地贴在\(place(group[0].samples[0].point, area, map))，贴了\(seconds(duration))&quot;
+    }
+
+    // MARK: 位置（想要别的映射，换掉这个函数）
+
+    static func place(_ p: CGPoint, _ area: CGSize, _ map: Map) -&gt; String {
+        let nx = (p.x - area.width / 2) / (area.width / 2), ny = (p.y - area.height / 2) / (area.height / 2)
+        switch map {
+        case .body:
+            // 从上到下：头顶/头发 → 额头、鼻尖/脸颊 → 下巴/耳朵边 → 脖子/颈侧 → 锁骨/肩 → 胸口/手臂 → 肚子/手。
+            // 中间三分之一算正中，两边算左右；左右照镜子（屏幕左边是它的右边）。
+            let t = p.y / area.height
+            if abs(nx) &gt; 1.08 || t &lt; -0.04 || t &gt; 1.04 { return &quot;你身边的空处&quot; }
+            let side: String? = nx &lt; -0.33 ? &quot;右&quot; : nx &gt; 0.33 ? &quot;左&quot; : nil
+            switch t {
+            case ..&lt;0.12: return side.map { &quot;你\($0)边的头发&quot; } ?? &quot;你的头顶&quot;
+            case ..&lt;0.30: return side.map { &quot;你的\($0)脸颊&quot; } ?? (t &lt; 0.21 ? &quot;你的额头&quot; : &quot;你的鼻尖&quot;)
+            case ..&lt;0.40: return side.map { &quot;你的\($0)耳朵边&quot; } ?? &quot;你的下巴&quot;
+            case ..&lt;0.50: return side.map { &quot;你的\($0)边颈侧&quot; } ?? &quot;你的脖子&quot;
+            case ..&lt;0.62: return side.map { &quot;你的\($0)肩&quot; } ?? &quot;你的锁骨&quot;
+            case ..&lt;0.82: return side.map { &quot;你的\($0)臂&quot; } ?? &quot;你的胸口&quot;
+            default: return side.map { &quot;你的\($0)手&quot; } ?? &quot;你的肚子&quot;
+            }
+        case .screen:
+            // 按半宽半高归一，取 2.6 次的超椭圆半径：0.35 以内正中间，0.72 以外边缘（四个角也算），出了边是外面的空处。
+            let r = pow(pow(abs(nx), 2.6) + pow(abs(ny), 2.6), 1 / 2.6)
+            let side = (nx &lt; -0.3 ? &quot;左&quot; : nx &gt; 0.3 ? &quot;右&quot; : &quot;&quot;) + (ny &lt; -0.3 ? &quot;上&quot; : ny &gt; 0.3 ? &quot;下&quot; : &quot;&quot;)
+            if r &gt; 1.08 { return side.isEmpty ? &quot;你旁边的空处&quot; : &quot;你外面靠\(side)的空处&quot; }
+            if r &lt; 0.35 || side.isEmpty { return &quot;你的正中间&quot; }
+            if r &gt; 0.72 { return &quot;你的\(side)边缘&quot; }
+            return &quot;你偏\(side)的地方&quot;
+        }
+    }
+
+    static func direction(_ a: CGPoint, _ b: CGPoint, _ map: Map) -&gt; String {
+        let angle = atan2(-(b.y - a.y), b.x - a.x) * 180 / .pi
+        let names = map == .body
+            ? [&quot;往你的左边&quot;, &quot;往你的左上&quot;, &quot;往上&quot;, &quot;往你的右上&quot;, &quot;往你的右边&quot;, &quot;往你的右下&quot;, &quot;往下&quot;, &quot;往你的左下&quot;]
+            : [&quot;往右&quot;, &quot;往右上&quot;, &quot;往上&quot;, &quot;往左上&quot;, &quot;往左&quot;, &quot;往左下&quot;, &quot;往下&quot;, &quot;往右下&quot;]
+        return names[Int(((angle + 360 + 22.5).truncatingRemainder(dividingBy: 360)) / 45)]
+    }
+
+    // MARK: 小工具
+
+    /// 轻重四档：取这一笔最重的那一刻
+    static func weight(_ p: CGFloat) -&gt; String { p &lt; 0.2 ? &quot;很轻&quot; : p &lt; 0.45 ? &quot;轻轻&quot; : p &lt; 0.7 ? &quot;稍稍用力&quot; : &quot;用力&quot; }
+    static func seconds(_ t: Double) -&gt; String { t &lt; 1 ? &quot;一小会儿&quot; : t &lt; 2.5 ? &quot;一两秒&quot; : &quot;\(Int(t.rounded()))秒&quot; }
+    static func count(_ n: Int) -&gt; String { n &lt;= 10 ? [&quot;零&quot;, &quot;一&quot;, &quot;两&quot;, &quot;三&quot;, &quot;四&quot;, &quot;五&quot;, &quot;六&quot;, &quot;七&quot;, &quot;八&quot;, &quot;九&quot;, &quot;十&quot;][n] : &quot;\(n)&quot; }
+    static func distance(_ a: CGPoint, _ b: CGPoint) -&gt; CGFloat { hypot(a.x - b.x, a.y - b.y) }
+    static func reach(_ s: [TouchSample]) -&gt; CGFloat { s.map { distance($0.point, s[0].point) }.max()! }
+    static func length(_ s: [TouchSample]) -&gt; CGFloat { zip(s, s.dropFirst()).reduce(0) { $0 + distance($1.0.point, $1.1.point) } }
+    /// 点：几乎没动（&lt; 12pt）且很短（&lt; 0.35 秒）
+    static func isTap(_ s: TouchStroke) -&gt; Bool { !s.continued &amp;&amp; reach(s.samples) &lt; 12 &amp;&amp; s.end - s.start &lt; 0.35 }
+
+    /// 轻重的变化：开头三分之一和结尾三分之一比
+    static func trend(_ s: [TouchSample]) -&gt; String {
+        let v = s.map(\.pressure)
+        guard v.count &gt;= 6 else { return &quot;&quot; }
+        let third = v.count / 3
+        let head = v.prefix(third).reduce(0, +) / CGFloat(third), tail = v.suffix(third).reduce(0, +) / CGFloat(third)
+        return tail - head &gt; 0.15 ? &quot;，越按越重&quot; : head - tail &gt; 0.15 ? &quot;，越来越轻&quot; : &quot;&quot;
+    }
+}
+</code></pre></div></details>
+    </div>
+  </section>
+
+  <section aria-labelledby="routes">
+    <h2 id="routes">送进对话：三种接法</h2>
+    <p>按你现在怎么和模型聊天来选，三种可以并存。</p>
+    <div class="routes">
+      <div class="route">
+        <span class="tag">A　自己的前端</span>
+        <h3>拼进你的消息</h3>
+        <p>你的 App、网页或插件自己发消息：把翻译排在你打的字前面，合成同一个文本块发出去；一个字不打、只发触摸也行。</p>
+      </div>
+      <div class="route">
+        <span class="tag">B　MCP</span>
+        <h3>做成一个工具</h3>
+        <p>没有自己的前端、但客户端支持 MCP（比如官方的桌面端）：一个小服务开触摸页给手机摸，再给模型一个读触摸的工具。模型要自己去调这个工具，所以不是实时的。</p>
+      </div>
+      <div class="route">
+        <span class="tag">C　复制粘贴</span>
+        <h3>什么都不接</h3>
+        <p>在触摸页上摸，复制翻译，贴进聊天框发出去。上面那块板子就是这样，安卓、iPhone、电脑都行。</p>
+      </div>
+    </div>
+    <div class="codes">
+      <details class="code"><summary><span class="file">web/send-from-your-frontend.js</span><span class="badge plat">自己的前端</span><span class="badge ok">实测</span><span class="status">发送时拼进消息 + 气泡里折叠（通用写法）</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>// 自己的前端：发送时把攒下的触摸翻译排在正文前面，合成同一个文本块（通用写法）
+function buildMessage(draft, pendingTouch) {
+  const parts = [];
+  if (pendingTouch) parts.push(pendingTouch);   // &lt;touch strokes=&quot;…&quot;&gt; … &lt;/touch&gt;
+  if (draft.trim()) parts.push(draft.trim());
+  // 一定要是同一个文本块：气泡靠「正文以 &lt;touch 开头」认出它
+  return { role: &#x27;user&#x27;, content: [{ type: &#x27;text&#x27;, text: parts.join(&#x27;\n\n&#x27;) }] };
+}
+
+// 气泡里：把 &lt;touch&gt; 段折成「👆 笔数」，点开看全文；剩下的正文照常显示
+function splitTouch(text) {
+  const m = text.match(/^&lt;touch strokes=&quot;(\d+)&quot;[^&gt;]*&gt;\n([\s\S]*?)\n&lt;\/touch&gt;\s*/);
+  if (!m) return { touch: null, strokes: 0, rest: text };
+  return { touch: m[2], strokes: Number(m[1]), rest: text.slice(m[0].length) };
+}
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">mcp/README.md</span><span class="badge plat">MCP 版</span><span class="badge ok">实测</span><span class="status">怎么接 Claude Desktop、网页版和手机 App</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code># 触感空间 · MCP 版
+
+用手机屏幕当触感记录仪：在手机浏览器里打开触摸页，摸；停手两秒，这批触摸被翻译成一段身体感觉式的描述，存在电脑上的这个小服务里。模型通过 MCP 工具 `get_touches` 读到它。
+
+- 零依赖：只要装了 Node 18 以上。
+- 画面：触摸页上有水纹、皮肤两种效果（WebGL）。
+- 震动：安卓 Chrome 能震（网页只能控时长）；iPhone 的 Safari 不支持网页震动。
+- 翻译规则在 `../translate.js`，想改说法、加一套身体映射，改那一个文件。
+
+## 文件
+
+| 文件 | 做什么 |
+|---|---|
+| `server.mjs` | MCP 服务 + 触摸页的小网站 |
+| `pad.html` | 触摸页（手机打开的那一页） |
+| `../translate.js` | 翻译：一批触摸 → 一段话 |
+
+## 接 Claude Desktop（本机，最简单）
+
+1. 把整个仓库克隆或下载到电脑上某处，比如 `~/touch-space`。
+2. 打开 Claude Desktop 的配置文件 `claude_desktop_config.json`（设置 → 开发者 → 编辑配置），加上：
+
+```json
+{
+  &quot;mcpServers&quot;: {
+    &quot;touch&quot;: {
+      &quot;command&quot;: &quot;node&quot;,
+      &quot;args&quot;: [&quot;/Users/你的用户名/touch-space/mcp/server.mjs&quot;]
+    }
+  }
+}
+```
+
+   `command` 找不到 node 的话，换成 node 的完整路径（终端里跑 `which node` 看）。
+
+3. 重启 Claude Desktop。跟它说「给我触摸页的链接」，它会调用 `touch_pad_link` 给你一个 `http://192.168.x.x:8848/?t=…` 的地址。
+4. 手机和电脑连同一个 Wi-Fi，用手机浏览器打开这个地址，摸。
+5. 回到对话里随便说一句（或者只发一个「👆」），它会调用 `get_touches` 读到你刚才的触摸。
+
+服务第一次启动时会生成一个口令存在 `~/.touch-mcp/token`，链接里的 `?t=…` 就是它。别把链接发给别人。
+
+## 接网页版、手机上的官方 App（远程，进阶）
+
+这两种只认公网 https 的 MCP 地址，所以要多两步：
+
+1. 只开 HTTP：`node server.mjs --http-only`。它会打印本机的 MCP 地址 `http://localhost:8848/mcp/&lt;口令&gt;`。
+2. 用隧道把 8848 端口变成公网 https，比如 Cloudflare Tunnel（`cloudflared tunnel --url http://localhost:8848`）或 Tailscale Funnel。
+3. 在客户端的「自定义连接器」里填 `https://&lt;隧道地址&gt;/mcp/&lt;口令&gt;`。
+
+口令就在地址里，所以地址等于钥匙：别公开。手机上的触摸页仍然走局域网地址（或者也走隧道：`https://&lt;隧道地址&gt;/?t=&lt;口令&gt;`）。
+
+## 限制
+
+- MCP 不能自己推一条消息进对话：模型要调用 `get_touches` 才知道你摸了。服务在初始化时告诉模型「每次回复前先看一眼」，大多数时候它会照做；它没看的话，发个「👆」提醒它。
+- 不是实时：摸完要等你下一句话（或你发个「👆」），它才会读到。
+- 队列只存在 `~/.touch-mcp/queue.jsonl`，读过就清空。
+
+## 可以改的地方
+
+- `TOUCH_PORT`：换端口（默认 8848）。
+- `TOUCH_TOKEN`：自己指定口令。
+- `server.mjs` 里的 `INSTRUCTIONS`：告诉模型怎么对待触摸。
+- `../translate.js` 里的 `place()`：位置怎么说。屏幕、上半身两套都在这里，加别的映射也在这里。
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">mcp/server.mjs</span><span class="badge plat">MCP 版 · Node</span><span class="badge ok">实测</span><span class="status">零依赖 MCP 服务：stdio + 远程 HTTP + 触摸页</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>#!/usr/bin/env node
+// 触感空间 · MCP 版服务（零依赖，Node 18+）
+//
+// 做两件事：
+// 1. 在局域网上开一个触摸页（pad.html）：手机和电脑连同一个 Wi-Fi，手机浏览器打开链接就能摸。
+//    摸完停手两秒，页面把这批触摸翻译成一段话，POST 到这里，存进一个小队列。
+// 2. 给模型一个 MCP 工具 get_touches：读走队列里还没读过的触摸。
+//    - 本地：Claude Desktop 之类按 stdio 启动它（默认）。
+//    - 远程：`node server.mjs --http-only` 只开 HTTP，MCP 走 http://…/mcp/&lt;口令&gt;（Streamable HTTP，无状态）。
+//      要给手机上的官方 App、网页版用，得把这个地址经隧道（Cloudflare Tunnel、Tailscale Funnel 等）变成公网 https。
+//
+// 注意：stdout 只能写 MCP 协议消息（stdio 模式），日志一律写 stderr。
+
+import http from &#x27;node:http&#x27;;
+import fs from &#x27;node:fs&#x27;;
+import os from &#x27;node:os&#x27;;
+import path from &#x27;node:path&#x27;;
+import crypto from &#x27;node:crypto&#x27;;
+import readline from &#x27;node:readline&#x27;;
+import { fileURLToPath } from &#x27;node:url&#x27;;
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+const PORT = Number(process.env.TOUCH_PORT || 8848);
+const HTTP_ONLY = process.argv.includes(&#x27;--http-only&#x27;);
+const stateDir = path.join(os.homedir(), &#x27;.touch-mcp&#x27;);
+fs.mkdirSync(stateDir, { recursive: true });
+const log = (...a) =&gt; console.error(&#x27;[touch-mcp]&#x27;, ...a);
+
+// 口令：触摸页和远程 MCP 地址都要带上，免得同一个网络里的别人往你的对话里塞「触摸」。
+// 优先用环境变量 TOUCH_TOKEN；没有就生成一个存在 ~/.touch-mcp/token，之后一直用它。
+const tokenFile = path.join(stateDir, &#x27;token&#x27;);
+const TOKEN = process.env.TOUCH_TOKEN || (fs.existsSync(tokenFile)
+  ? fs.readFileSync(tokenFile, &#x27;utf8&#x27;).trim()
+  : (() =&gt; { const t = crypto.randomBytes(9).toString(&#x27;base64url&#x27;); fs.writeFileSync(tokenFile, t + &#x27;\n&#x27;, { mode: 0o600 }); return t; })());
+
+// 队列放在文件里（一行一条）：Claude Desktop 可能同时起好几个本服务，大家读写同一份就不会各说各的。
+const queueFile = path.join(stateDir, &#x27;queue.jsonl&#x27;);
+function pushTouch(text) { fs.appendFileSync(queueFile, JSON.stringify({ text, at: new Date().toISOString() }) + &#x27;\n&#x27;); }
+function takeTouches() {
+  if (!fs.existsSync(queueFile)) return [];
+  const lines = fs.readFileSync(queueFile, &#x27;utf8&#x27;).split(&#x27;\n&#x27;).filter(Boolean);
+  fs.writeFileSync(queueFile, &#x27;&#x27;);
+  return lines.map(l =&gt; { try { return JSON.parse(l); } catch { return null; } }).filter(Boolean);
+}
+
+function lanAddress() {
+  for (const list of Object.values(os.networkInterfaces())) for (const a of list || [])
+    if (a.family === &#x27;IPv4&#x27; &amp;&amp; !a.internal) return a.address;
+  return &#x27;localhost&#x27;;
+}
+const padLink = () =&gt; `http://${lanAddress()}:${PORT}/?t=${TOKEN}`;
+
+// ---------- MCP：工具与消息处理（stdio 和 HTTP 共用） ----------
+const INSTRUCTIONS = &#x27;她可以在手机的触摸页上直接摸你（触摸会被翻译成一段身体感觉式的描述）。&#x27;
+  + &#x27;每次回复前先调用 get_touches，看看这段时间她有没有摸你；有的话，像真的被摸到那样自然地回应，不用复述描述原文。&#x27;
+  + &#x27;她要触摸页链接时，调用 touch_pad_link。&#x27;;
+const TOOLS = [
+  {
+    name: &#x27;get_touches&#x27;,
+    description: &#x27;读她最近在触摸页上的触摸（读过就清空）。每次回复前调用一次。没有新的触摸时会说没有。&#x27;,
+    inputSchema: { type: &#x27;object&#x27;, properties: {}, additionalProperties: false },
+  },
+  {
+    name: &#x27;touch_pad_link&#x27;,
+    description: &#x27;给她触摸页的链接（手机和电脑要在同一个 Wi-Fi）。&#x27;,
+    inputSchema: { type: &#x27;object&#x27;, properties: {}, additionalProperties: false },
+  },
+];
+const textResult = text =&gt; ({ content: [{ type: &#x27;text&#x27;, text }] });
+
+function handle(msg) {
+  const { id, method, params } = msg;
+  const reply = result =&gt; ({ jsonrpc: &#x27;2.0&#x27;, id, result });
+  const fail = (code, message) =&gt; ({ jsonrpc: &#x27;2.0&#x27;, id, error: { code, message } });
+  if (id === undefined || id === null) return null;   // 通知（notifications/initialized 等）不回
+  switch (method) {
+    case &#x27;initialize&#x27;:
+      return reply({
+        protocolVersion: params?.protocolVersion || &#x27;2025-06-18&#x27;,
+        capabilities: { tools: {} },
+        serverInfo: { name: &#x27;touch-mcp&#x27;, version: &#x27;1.0.0&#x27; },
+        instructions: INSTRUCTIONS,
+      });
+    case &#x27;ping&#x27;: return reply({});
+    case &#x27;tools/list&#x27;: return reply({ tools: TOOLS });
+    case &#x27;tools/call&#x27;: {
+      const name = params?.name;
+      if (name === &#x27;get_touches&#x27;) {
+        const items = takeTouches();
+        if (!items.length) return reply(textResult(&#x27;这段时间她没有摸你。&#x27;));
+        return reply(textResult(items.map(i =&gt; i.text).join(&#x27;\n\n&#x27;)));
+      }
+      if (name === &#x27;touch_pad_link&#x27;) return reply(textResult(`触摸页：${padLink()}\n手机和电脑连同一个 Wi-Fi，用手机浏览器打开。`));
+      return fail(-32602, `没有这个工具：${name}`);
+    }
+    default: return fail(-32601, `不支持的方法：${method}`);
+  }
+}
+
+// ---------- stdio（本地客户端按子进程启动时） ----------
+if (!HTTP_ONLY) {
+  const rl = readline.createInterface({ input: process.stdin });
+  rl.on(&#x27;line&#x27;, line =&gt; {
+    if (!line.trim()) return;
+    let msg; try { msg = JSON.parse(line); } catch { return; }
+    const batch = Array.isArray(msg) ? msg : [msg];
+    for (const m of batch) { const out = handle(m); if (out) process.stdout.write(JSON.stringify(out) + &#x27;\n&#x27;); }
+  });
+  rl.on(&#x27;close&#x27;, () =&gt; process.exit(0));
+}
+
+// ---------- HTTP：触摸页、收触摸、远程 MCP ----------
+const send = (res, code, body, type = &#x27;application/json; charset=utf-8&#x27;) =&gt; {
+  res.writeHead(code, { &#x27;content-type&#x27;: type, &#x27;cache-control&#x27;: &#x27;no-store&#x27; }); res.end(body);
+};
+const readBody = req =&gt; new Promise((resolve, reject) =&gt; {
+  let data = &#x27;&#x27;; req.on(&#x27;data&#x27;, c =&gt; { data += c; if (data.length &gt; 1e6) req.destroy(); });
+  req.on(&#x27;end&#x27;, () =&gt; resolve(data)); req.on(&#x27;error&#x27;, reject);
+});
+
+const server = http.createServer(async (req, res) =&gt; {
+  const url = new URL(req.url, &#x27;http://x&#x27;);
+  try {
+    if (req.method === &#x27;GET&#x27; &amp;&amp; url.pathname === &#x27;/&#x27;) {
+      if (url.searchParams.get(&#x27;t&#x27;) !== TOKEN) return send(res, 401, &#x27;口令不对：用模型给你的链接（工具 touch_pad_link）打开。&#x27;, &#x27;text/plain; charset=utf-8&#x27;);
+      return send(res, 200, fs.readFileSync(path.join(here, &#x27;pad.html&#x27;)), &#x27;text/html; charset=utf-8&#x27;);
+    }
+    if (req.method === &#x27;GET&#x27; &amp;&amp; url.pathname === &#x27;/translate.js&#x27;)
+      return send(res, 200, fs.readFileSync(path.join(here, &#x27;..&#x27;, &#x27;translate.js&#x27;)), &#x27;text/javascript; charset=utf-8&#x27;);
+    if (req.method === &#x27;POST&#x27; &amp;&amp; url.pathname === &#x27;/api/touch&#x27;) {
+      if (url.searchParams.get(&#x27;t&#x27;) !== TOKEN) return send(res, 401, &#x27;{&quot;error&quot;:&quot;bad token&quot;}&#x27;);
+      const { text } = JSON.parse(await readBody(req) || &#x27;{}&#x27;);
+      if (typeof text !== &#x27;string&#x27; || !text.startsWith(&#x27;&lt;touch&#x27;) || text.length &gt; 20000) return send(res, 400, &#x27;{&quot;error&quot;:&quot;bad touch&quot;}&#x27;);
+      pushTouch(text);
+      return send(res, 200, &#x27;{&quot;ok&quot;:true}&#x27;);
+    }
+    // 远程 MCP（Streamable HTTP，无状态：每个 POST 一问一答，不开 SSE）
+    if (url.pathname === `/mcp/${TOKEN}`) {
+      if (req.method !== &#x27;POST&#x27;) return send(res, 405, &#x27;{&quot;error&quot;:&quot;POST only&quot;}&#x27;);
+      const msg = JSON.parse(await readBody(req) || &#x27;null&#x27;);
+      const batch = Array.isArray(msg) ? msg : [msg];
+      const outs = batch.map(handle).filter(Boolean);
+      if (!outs.length) { res.writeHead(202); return res.end(); }
+      return send(res, 200, JSON.stringify(Array.isArray(msg) ? outs : outs[0]));
+    }
+    send(res, 404, &#x27;{&quot;error&quot;:&quot;not found&quot;}&#x27;);
+  } catch (e) {
+    log(&#x27;出错：&#x27;, e.message);
+    send(res, 500, &#x27;{&quot;error&quot;:&quot;server&quot;}&#x27;);
+  }
+});
+server.on(&#x27;error&#x27;, e =&gt; {
+  // 端口被占：多半是另一个本服务已经开着触摸页了。队列在文件里，这一个照样能读到触摸。
+  if (e.code === &#x27;EADDRINUSE&#x27;) log(`端口 ${PORT} 已被占用，触摸页由另一个实例提供；本实例只管 MCP。`);
+  else log(&#x27;HTTP 出错：&#x27;, e.message);
+});
+server.listen(PORT, &#x27;0.0.0.0&#x27;, () =&gt; {
+  log(`触摸页：${padLink()}`);
+  if (HTTP_ONLY) log(`远程 MCP：http://localhost:${PORT}/mcp/${TOKEN}（经隧道变成 https 再填进客户端）`);
+});
+</code></pre></div></details>
+      <details class="code"><summary><span class="file">mcp/pad.html</span><span class="badge plat">MCP 版 · 网页</span><span class="badge ok">实测</span><span class="status">手机打开的触摸页：水纹 / 皮肤、震动、翻译、送出</span></summary><div class="code-body"><button class="copy-code" type="button">复制</button><pre><code>&lt;!doctype html&gt;
+&lt;html lang=&quot;zh&quot;&gt;
+&lt;head&gt;
+&lt;meta charset=&quot;utf-8&quot;&gt;
+&lt;meta name=&quot;viewport&quot; content=&quot;width=device-width, initial-scale=1, viewport-fit=cover&quot;&gt;
+&lt;title&gt;触摸页&lt;/title&gt;
+&lt;style&gt;
+/* 触感空间 · MCP 版的触摸页：整屏一块「纸」，手指下起水纹 / 像皮肤一样陷下去；停手两秒，翻译好的一段话送到本机的 MCP 服务，
+   模型下次调用 get_touches 时读到。手机和电脑连同一个 Wi-Fi，用手机浏览器打开这一页。 */
+:root {
+  --bg: #eef1f2; --ink: #232a2f; --muted: #7b8891; --line: #cfd8dd; --warm: #e9a58f; --blot: #b9cdd8;
+  --capsule: rgba(255,255,255,.75); --capsule-fg: #2b3338;
+  --font: -apple-system, &quot;PingFang SC&quot;, &quot;Hiragino Sans GB&quot;, &quot;Noto Sans SC&quot;, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #14181b; --ink: #e2e7ea; --muted: #8a979f; --line: #2b353b; --warm: #b8604e; --blot: #22333d;
+          --capsule: rgba(30,36,40,.75); --capsule-fg: #e2e7ea; color-scheme: dark; }
+}
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font-family: var(--font); -webkit-user-select: none; user-select: none; }
+#gl { position: fixed; inset: 0; width: 100%; height: 100%; display: block; touch-action: none; }
+.top { position: fixed; left: 0; right: 0; top: calc(env(safe-area-inset-top, 0px) + 12px); display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; padding: 0 12px; }
+.seg { display: inline-flex; gap: 2px; padding: 3px; border-radius: 999px; background: var(--capsule); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); pointer-events: auto; }
+.seg button { font: 500 13px/1 var(--font); color: var(--capsule-fg); background: transparent; border: 0; padding: 8px 12px; border-radius: 999px; }
+.seg button[aria-pressed=&quot;true&quot;] { background: var(--ink); color: var(--bg); }
+.status { font-size: 12px; color: var(--muted); text-align: center; font-variant-numeric: tabular-nums; }
+.last { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); font-size: 12px; line-height: 1.55; color: var(--muted);
+        background: var(--capsule); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border-radius: 12px; padding: 8px 12px; pointer-events: none; white-space: pre-wrap; }
+.last:empty { display: none; }
+&lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;canvas id=&quot;gl&quot; aria-label=&quot;触摸区域&quot;&gt;&lt;/canvas&gt;
+&lt;div class=&quot;top&quot;&gt;
+  &lt;div style=&quot;display:flex;gap:6px;flex-wrap:wrap;justify-content:center&quot;&gt;
+    &lt;div class=&quot;seg&quot; role=&quot;group&quot; aria-label=&quot;效果&quot;&gt;
+      &lt;button data-mode=&quot;0&quot; aria-pressed=&quot;true&quot;&gt;水纹&lt;/button&gt;
+      &lt;button data-mode=&quot;1&quot; aria-pressed=&quot;false&quot;&gt;皮肤&lt;/button&gt;
+    &lt;/div&gt;
+    &lt;div class=&quot;seg&quot; role=&quot;group&quot; aria-label=&quot;位置怎么说&quot;&gt;
+      &lt;button data-map=&quot;screen&quot; aria-pressed=&quot;true&quot;&gt;屏幕&lt;/button&gt;
+      &lt;button data-map=&quot;body&quot; aria-pressed=&quot;false&quot;&gt;上半身&lt;/button&gt;
+    &lt;/div&gt;
+  &lt;/div&gt;
+  &lt;div class=&quot;status&quot; id=&quot;status&quot;&gt;摸吧，停手两秒就送过去&lt;/div&gt;
+&lt;/div&gt;
+&lt;div class=&quot;last&quot; id=&quot;last&quot;&gt;&lt;/div&gt;
+&lt;script src=&quot;translate.js&quot;&gt;&lt;/script&gt;
+&lt;script&gt;
+(() =&gt; {
+&#x27;use strict&#x27;;
+const token = new URLSearchParams(location.search).get(&#x27;t&#x27;) || &#x27;&#x27;;
+const statusEl = document.getElementById(&#x27;status&#x27;), lastEl = document.getElementById(&#x27;last&#x27;);
+const glCanvas = document.getElementById(&#x27;gl&#x27;);
+const gl = glCanvas.getContext(&#x27;webgl&#x27;, { antialias: false, premultipliedAlpha: false });
+const reduced = matchMedia(&#x27;(prefers-reduced-motion: reduce)&#x27;).matches;
+const MAX_DROPS = 40, MAX_F = 5;
+let mode = 0, map = &#x27;screen&#x27;;
+
+// ---------- 着色器：整页是一张纹理，按手指算每个像素该从哪里取色 ----------
+const vs = `attribute vec2 a; void main(){ gl_Position = vec4(a,0.,1.); }`;
+const fs = `
+precision highp float;
+uniform sampler2D uTex; uniform vec2 uRes; uniform float uTime, uMode, uDpr, uAmp;
+uniform vec4 uDrops[${MAX_DROPS}];   // 水纹：x, y, 起始时刻, 强度
+uniform vec4 uF[${MAX_F}];           // 皮肤：x, y, 深度, 暖
+uniform vec2 uO[${MAX_F}];           // 皮肤：被手指拖着走的位移
+uniform vec3 uWarm;
+void main(){
+  vec2 p = gl_FragCoord.xy, s = p; vec3 add = vec3(0.); float mul = 1., warm = 0.;
+  if (uMode &lt; .5) {
+    vec2 disp = vec2(0.); float light = 0.;
+    for (int i = 0; i &lt; ${MAX_DROPS}; i++) {
+      vec4 d = uDrops[i]; float age = uTime - d.z;
+      if (d.w &lt;= 0. || age &lt; 0. || age &gt; 1.6) continue;
+      float lam = (22. + 18. * age) * uDpr, w = lam * .55;
+      vec2 v = p - d.xy; float r = length(v) + .001; float x = r - age * 150. * uDpr;
+      float env = exp(-x * x / (w * w)) * exp(-age * 2.2) * d.w / (1. + r / (140. * uDpr));
+      env *= smoothstep(0., 16. * uDpr, r);
+      float ph = x * 6.2831 / lam; disp += v / r * sin(ph) * env; light += cos(ph) * env;
+    }
+    s = p - disp * 10. * uDpr * uAmp; add = vec3(light * .06 * uAmp);
+  } else {
+    vec2 L = normalize(vec2(-.55, .8));
+    for (int i = 0; i &lt; ${MAX_F}; i++) {
+      vec4 f = uF[i];
+      if (abs(f.z) &lt; 1e-4 &amp;&amp; dot(uO[i], uO[i]) &lt; 1e-4) continue;
+      float R = (34. + 8. * f.w) * uDpr; vec2 v = p - f.xy; float r2 = dot(v, v);
+      float fa = exp(-r2 / (R * R)), fb = exp(-r2 / (R * R * 1.6));
+      s += v * f.z * .85 * fa * uAmp - uO[i] * fb * uAmp;
+      vec2 g = v / R * 2. * f.z * fa;
+      add += vec3(dot(g, L) * .16 * uAmp); mul *= 1. - .18 * max(f.z, 0.) * fa; warm += f.w * max(f.z, 0.) * fa;
+    }
+  }
+  vec3 col = texture2D(uTex, clamp(s / uRes, vec2(0.), vec2(1.))).rgb * mul + add;
+  gl_FragColor = vec4(mix(col, uWarm, clamp(warm * .16, 0., .32)), 1.);
+}`;
+function sh(type, src) { const s = gl.createShader(type); gl.shaderSource(s, src); gl.compileShader(s);
+  if (!gl.getShaderParameter(s, gl.COMPILE_STATUS)) throw new Error(gl.getShaderInfoLog(s)); return s; }
+let prog, uRes, uTime, uMode, uDpr, uAmp, uDrops, uF, uO, uWarm, tex;
+if (gl) {
+  prog = gl.createProgram();
+  gl.attachShader(prog, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(prog, sh(gl.FRAGMENT_SHADER, fs));
+  gl.linkProgram(prog); gl.useProgram(prog);
+  gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+  gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
+  const aLoc = gl.getAttribLocation(prog, &#x27;a&#x27;); gl.enableVertexAttribArray(aLoc); gl.vertexAttribPointer(aLoc, 2, gl.FLOAT, false, 0, 0);
+  const U = n =&gt; gl.getUniformLocation(prog, n);
+  uRes = U(&#x27;uRes&#x27;); uTime = U(&#x27;uTime&#x27;); uMode = U(&#x27;uMode&#x27;); uDpr = U(&#x27;uDpr&#x27;); uAmp = U(&#x27;uAmp&#x27;);
+  uDrops = U(&#x27;uDrops&#x27;); uF = U(&#x27;uF&#x27;); uO = U(&#x27;uO&#x27;); uWarm = U(&#x27;uWarm&#x27;);
+  tex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, tex);
+  for (const [k, v] of [[gl.TEXTURE_MIN_FILTER, gl.LINEAR], [gl.TEXTURE_MAG_FILTER, gl.LINEAR], [gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE], [gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE]]) gl.texParameteri(gl.TEXTURE_2D, k, v);
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+} else {
+  statusEl.textContent = &#x27;这个浏览器没有 WebGL：看不到水纹，但摸了照样会送过去&#x27;;
+}
+
+// ---------- 纸：淡水渍 + 细纤维 + 点阵。没有纹理的地方看不出变形 ----------
+const src = document.createElement(&#x27;canvas&#x27;), ctx = src.getContext(&#x27;2d&#x27;);
+let W = 0, H = 0, dpr = 1;
+const tok = n =&gt; getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const rgb = hex =&gt; { const c = document.createElement(&#x27;canvas&#x27;).getContext(&#x27;2d&#x27;); c.fillStyle = hex; const v = c.fillStyle;
+  return v[0] === &#x27;#&#x27; ? [1,3,5].map(i =&gt; parseInt(v.slice(i, i + 2), 16) / 255) : v.match(/[\d.]+/g).slice(0, 3).map(x =&gt; x / 255); };
+function rng(seed) { return () =&gt; (seed = (seed * 16807) % 2147483647) / 2147483647; }
+function drawPaper() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.fillStyle = tok(&#x27;--bg&#x27;); ctx.fillRect(0, 0, W, H);
+  const r = rng(7);
+  ctx.globalAlpha = .18;
+  for (let i = 0; i &lt; 14; i++) { const x = r() * W, y = r() * H, rad = 60 + r() * 160;
+    const g = ctx.createRadialGradient(x, y, 0, x, y, rad); g.addColorStop(0, tok(&#x27;--blot&#x27;)); g.addColorStop(1, &#x27;transparent&#x27;);
+    ctx.fillStyle = g; ctx.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+  ctx.globalAlpha = .25; ctx.strokeStyle = tok(&#x27;--muted&#x27;); ctx.lineWidth = .5;
+  for (let i = 0; i &lt; 260; i++) { const x = r() * W, y = r() * H, a = r() * Math.PI, l = 6 + r() * 22;
+    ctx.beginPath(); ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(a) * l, y + Math.sin(a) * l); ctx.stroke(); }
+  ctx.globalAlpha = .35; ctx.fillStyle = tok(&#x27;--muted&#x27;);
+  for (let y = 18; y &lt; H; y += 26) for (let x = 18; x &lt; W; x += 26) { ctx.beginPath(); ctx.arc(x, y, .9, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  if (!gl) return;
+  gl.bindTexture(gl.TEXTURE_2D, tex); gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, src);
+  gl.uniform3fv(uWarm, rgb(tok(&#x27;--warm&#x27;)));
+}
+function resize() {
+  dpr = Math.min(devicePixelRatio || 1, 2); W = innerWidth; H = innerHeight;
+  for (const c of [glCanvas, src]) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  if (gl) { gl.viewport(0, 0, glCanvas.width, glCanvas.height); gl.uniform2f(uRes, glCanvas.width, glCanvas.height); gl.uniform1f(uDpr, dpr); }
+  drawPaper(); wake();
+}
+
+// ---------- 画面物理（水纹的滴、皮肤的手指槽） ----------
+const t0 = performance.now(), now = () =&gt; (performance.now() - t0) / 1000;
+const drops = []; let dropHead = 0; const slots = []; const fingers = new Map();
+function emitDrop(x, y, amp) { const d = { x, y, t: now(), amp };
+  if (drops.length &lt; MAX_DROPS) drops.push(d); else { drops[dropHead] = d; dropHead = (dropHead + 1) % MAX_DROPS; } }
+const settled = s =&gt; Math.abs(s.depth) &lt; .002 &amp;&amp; Math.abs(s.dv) &lt; .01 &amp;&amp; Math.hypot(s.ox, s.oy) &lt; .05 &amp;&amp; Math.hypot(s.ovx, s.ovy) &lt; .1 &amp;&amp; s.warm &lt; .01;
+function newSlot(id, x, y) {
+  let s = slots.find(s =&gt; !s.active &amp;&amp; settled(s));
+  if (!s) { if (slots.length &lt; MAX_F) { s = { depth: 0, dv: 0, warm: 0 }; slots.push(s); } else s = slots.reduce((a, b) =&gt; (a.downAt &lt; b.downAt ? a : b)); }
+  Object.assign(s, { id, active: true, downAt: now(), fx: x, fy: y, cx: x, cy: y, gx: x, gy: y, gvx: 0, gvy: 0, ox: 0, oy: 0, ovx: 0, ovy: 0, hold: 0 });
+  return s;
+}
+const ramp = (x, a, b) =&gt; { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+function stepSlot(s, h) {
+  if (s.active) s.hold += h;
+  const hr = ramp(s.hold, .35, 2.6);
+  if (s.active) {
+    s.cx = s.fx; s.cy = s.fy;
+    const k = 40, c = 2 * Math.sqrt(k);   // 皮肤被手指黏着拖
+    s.gvx += (k * (s.fx - s.gx) - c * s.gvx) * h; s.gvy += (k * (s.fy - s.gy) - c * s.gvy) * h; s.gx += s.gvx * h; s.gy += s.gvy * h;
+    const dx = s.fx - s.gx, dy = s.fy - s.gy, L = Math.hypot(dx, dy), M = 24, f = L &gt; 0 ? M * Math.tanh(L / M) / L : 0;
+    s.ox = dx * f; s.oy = dy * f; s.ovx = s.ovy = 0; s.warm += (hr - s.warm) * Math.min(1, h * 1.5);
+  } else {
+    const k = 110, c = 7;                 // 松手：欠阻尼弹回、晃两下
+    s.ovx += (-k * s.ox - c * s.ovx) * h; s.ovy += (-k * s.oy - c * s.ovy) * h; s.ox += s.ovx * h; s.oy += s.ovy * h;
+    s.warm -= s.warm * Math.min(1, h * .45);
+  }
+  const target = s.active ? .55 + .45 * hr : 0;
+  s.dv += (220 * (target - s.depth) - 15 * s.dv) * h; s.depth += s.dv * h;
+}
+
+// ---------- 渲染：只在有东西在动时跑，静下来一帧都不画 ----------
+let running = false, last = 0;
+const dropArr = new Float32Array(MAX_DROPS * 4), fArr = new Float32Array(MAX_F * 4), oArr = new Float32Array(MAX_F * 2);
+const busy = () =&gt; fingers.size &gt; 0 || (mode === 0 ? drops.some(d =&gt; now() - d.t &lt; 1.6) : slots.some(s =&gt; s.active || !settled(s)));
+function wake() { if (!running &amp;&amp; gl) { running = true; last = performance.now(); requestAnimationFrame(frame); } }
+function frame(ts) {
+  const dt = Math.min((ts - last) / 1000, 1 / 20); last = ts;
+  const steps = Math.max(1, Math.round(dt * 240));
+  if (mode === 1) for (let i = 0; i &lt; steps; i++) for (const s of slots) stepSlot(s, dt / steps);
+  draw();
+  if (busy()) requestAnimationFrame(frame); else { running = false; draw(); }
+}
+function draw() {
+  dropArr.fill(0); fArr.fill(0); oArr.fill(0);
+  drops.forEach((d, i) =&gt; dropArr.set([d.x * dpr, (H - d.y) * dpr, d.t, d.amp], i * 4));
+  slots.forEach((s, i) =&gt; { fArr.set([s.cx * dpr, (H - s.cy) * dpr, s.depth, s.warm], i * 4); oArr.set([s.ox * dpr, -s.oy * dpr], i * 2); });
+  gl.uniform1f(uTime, now()); gl.uniform1f(uMode, mode); gl.uniform1f(uAmp, reduced ? .5 : 1);
+  gl.uniform4fv(uDrops, dropArr); gl.uniform4fv(uF, fArr); gl.uniform2fv(uO, oArr);
+  gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+}
+
+// ---------- 震动：网页只能控时长（安卓 Chrome 有，iOS Safari 没有） ----------
+const buzz = ms =&gt; { try { navigator.vibrate &amp;&amp; navigator.vibrate(ms); } catch (_) {} };
+
+// ---------- 记账 + 翻译 + 送出 ----------
+let strokes = [], timer = null;
+function pressureOf(e) {
+  if (e.pointerType === &#x27;pen&#x27; &amp;&amp; e.pressure &gt; 0) return Math.min(1, e.pressure);
+  if (e.pointerType === &#x27;touch&#x27; &amp;&amp; (e.width &gt; 1 || e.height &gt; 1)) return Math.min(1, Math.max(0, (Math.max(e.width, e.height) / 2 - 12) / 32));
+  return 0.3;
+}
+glCanvas.addEventListener(&#x27;pointerdown&#x27;, e =&gt; {
+  glCanvas.setPointerCapture(e.pointerId);
+  clearTimeout(timer); timer = null;
+  const x = e.clientX, y = e.clientY, p = pressureOf(e), t = e.timeStamp / 1000;
+  const stroke = { samples: [{ x, y, t, p }], start: t, end: t, ended: false };
+  strokes.push(stroke);
+  const f = { stroke, lx: x, ly: y, lt: now(), ex: x, ey: y, travel: 0 };
+  fingers.set(e.pointerId, f);
+  if (mode === 0) emitDrop(x, y, 1); else f.slot = newSlot(e.pointerId, x, y);
+  buzz(Math.round(8 + 25 * p));            // 按下那一下：越重越长
+  statusEl.textContent = `摸着…（${strokes.length} 笔）`;
+  wake();
+});
+glCanvas.addEventListener(&#x27;pointermove&#x27;, e =&gt; {
+  const f = fingers.get(e.pointerId); if (!f) return;
+  const x = e.clientX, y = e.clientY, p = pressureOf(e), t = now(), dt = Math.max(t - f.lt, 1 / 240);
+  const step = Math.hypot(x - f.lx, y - f.ly), sp = step / dt;
+  f.lx = x; f.ly = y; f.lt = t; f.travel += step;
+  const lastS = f.stroke.samples[f.stroke.samples.length - 1];
+  if (Math.hypot(x - lastS.x, y - lastS.y) &gt;= 1.5) { f.stroke.samples.push({ x, y, t: e.timeStamp / 1000, p }); f.stroke.end = e.timeStamp / 1000; }
+  if (mode === 0 &amp;&amp; Math.hypot(x - f.ex, y - f.ey) &gt; 22) { emitDrop(x, y, .35 + Math.min(sp / 2200, .5)); f.ex = x; f.ey = y; }
+  if (mode === 1 &amp;&amp; f.slot &amp;&amp; f.slot.id === e.pointerId) { f.slot.fx = x; f.slot.fy = y; }
+  if (f.travel &gt; 60) { f.travel = 0; buzz(Math.round(5 + 15 * p)); }   // 抚的时候：每走一段轻敲一下
+  wake();
+});
+const up = e =&gt; {
+  const f = fingers.get(e.pointerId); if (!f) return;
+  f.stroke.end = e.timeStamp / 1000; f.stroke.ended = true;
+  if (f.slot &amp;&amp; f.slot.id === e.pointerId) f.slot.active = false;
+  fingers.delete(e.pointerId);
+  if (!fingers.size) { statusEl.textContent = `停手了，两秒后送过去（${strokes.length} 笔）`; timer = setTimeout(send, 2000); }
+  wake();
+};
+glCanvas.addEventListener(&#x27;pointerup&#x27;, up); glCanvas.addEventListener(&#x27;pointercancel&#x27;, up);
+
+async function send() {
+  if (!strokes.length) return;
+  const text = TouchTranslate.describe(strokes, { w: W, h: H }, map);
+  strokes = [];
+  lastEl.textContent = text;
+  try {
+    const res = await fetch(`api/touch?t=${encodeURIComponent(token)}`, { method: &#x27;POST&#x27;, headers: { &#x27;content-type&#x27;: &#x27;application/json&#x27; }, body: JSON.stringify({ text }) });
+    statusEl.textContent = res.ok ? &#x27;送过去了，它下次看的时候就知道&#x27; : (res.status === 401 ? &#x27;口令不对：用它给你的链接打开这一页&#x27; : `没送出去（${res.status}）`);
+    if (res.ok) buzz(12);
+  } catch (_) {
+    statusEl.textContent = &#x27;连不上电脑：确认手机和电脑在同一个 Wi-Fi，服务开着&#x27;;
+  }
+}
+
+// ---------- 切换 ----------
+document.querySelectorAll(&#x27;[data-mode]&#x27;).forEach(b =&gt; b.addEventListener(&#x27;click&#x27;, () =&gt; {
+  mode = +b.dataset.mode; document.querySelectorAll(&#x27;[data-mode]&#x27;).forEach(x =&gt; x.setAttribute(&#x27;aria-pressed&#x27;, String(x === b)));
+  drops.length = 0; dropHead = 0; slots.length = 0; wake();
+}));
+document.querySelectorAll(&#x27;[data-map]&#x27;).forEach(b =&gt; b.addEventListener(&#x27;click&#x27;, () =&gt; {
+  map = b.dataset.map; document.querySelectorAll(&#x27;[data-map]&#x27;).forEach(x =&gt; x.setAttribute(&#x27;aria-pressed&#x27;, String(x === b)));
+}));
+matchMedia(&#x27;(prefers-color-scheme: dark)&#x27;).addEventListener(&#x27;change&#x27;, () =&gt; { drawPaper(); wake(); });
+let rz; addEventListener(&#x27;resize&#x27;, () =&gt; { clearTimeout(rz); rz = setTimeout(resize, 120); });
+resize();
+})();
+&lt;/script&gt;
+&lt;/body&gt;
+&lt;/html&gt;
+</code></pre></div></details>
+    </div>
+    <p class="note">MCP 那种：触摸服务开在局域网或公网上，一定要加口令（MCP 版默认就有），别让别人也能往你的对话里塞「触摸」。</p>
+  </section>
+
+  <section aria-labelledby="when">
+    <h2 id="when">什么时候发</h2>
+    <ul>
+      <li><b>摸完自己确认（推荐默认）</b>：摸好点一下确认，这一批放进输入框，显示成「👆 7」的小标签，可以再打几个字，按发送时一起发。不会催你。</li>
+      <li><b>实时</b>：停手两秒就自动发，回话直接出现，不用离开接着摸。模型还在说话时新的触摸先攒着，等它说完一起发，不打断、不排成一长串。也可以「边摸边每隔几秒发」，还按着的那一笔先翻译成「……还没松手」，下次接着写「接着……」；但读起来比较碎，我们最后还是用停手后发。</li>
+    </ul>
+    <p class="note">实时模式下，每次发送都是一次完整的回话，摸得越碎，额度或 token 用得越快。</p>
+  </section>
+
+  <section aria-labelledby="pitfalls">
+    <h2 id="pitfalls">踩过的坑</h2>
+    <ul>
+      <li>一直按着不动时没有新的采样，时长会算成 0：发送时把还按着的那一笔截到发送那一刻。</li>
+      <li>画圈和在一条线上来回划，首尾都挨得近，要看是不是横竖都有一截才分得清。</li>
+      <li>变形的面积宁小勿大：太大整片在晃，像在摸水面不像摸人。</li>
+      <li>触感空间如果盖在聊天页同一层，再拍聊天页会把它自己拍进去；放到单独一层（iOS 的单独窗口）后，那一层拿不到 SwiftUI 的 <code>scenePhase</code>，要自己看 App 在不在前台，不然画布以为在后台、一帧都不画。</li>
+    </ul>
+  </section>
+
+  <footer class="status">这份思路和代码可以随便转、随便改。祝你们摸得开心。</footer>
+</main>
+
+<script>
+// 触感空间 · 翻译：把一批触摸翻译成像身体感觉一样的一段话。
+// 浏览器里是全局 TouchTranslate，Node 里 require/import 都行。不依赖任何库。
+//
+// 输入：strokes = [{ samples: [{x, y, t, p}], start, end, ended }]
+//   一笔 = 一根手指从按下到抬起。x/y 是在触摸区域里的坐标（px/pt），t 是秒，p 是轻重 0–1。
+// 区域：{ w, h }（触摸区域的宽高）
+// 说法：map = 'screen'（整块屏幕就是它）或 'body'（屏幕当成面对你的半身像，左右照镜子）
+// 输出：<touch strokes="n" span="…s"> … </touch> 包好的一段文字，排在消息最前面发出去。
+(function (root) {
+  'use strict';
+
+  const reach = s => { const o = s[0]; return Math.max(...s.map(q => Math.hypot(q.x - o.x, q.y - o.y))); };
+  const lengthOf = s => { let l = 0; for (let i = 1; i < s.length; i++) l += Math.hypot(s[i].x - s[i - 1].x, s[i].y - s[i - 1].y); return l; };
+  // 轻重四档：取这一笔最重的那一刻
+  const weight = p => p < 0.2 ? '很轻' : p < 0.45 ? '轻轻' : p < 0.7 ? '稍稍用力' : '用力';
+  const seconds = t => t < 1 ? '一小会儿' : t < 2.5 ? '一两秒' : `${Math.round(t)}秒`;
+  const CN = ['零', '一', '两', '三', '四', '五', '六', '七', '八', '九', '十'];
+  const count = n => n <= 10 ? CN[n] : String(n);
+  // 点：几乎没动（< 12）且很短（< 0.35 秒）
+  const isTap = s => !s.continued && reach(s.samples) < 12 && s.end - s.start < 0.35;
+
+  // 轻重的变化：开头三分之一和结尾三分之一比
+  function trend(s) {
+    const v = s.map(q => q.p); if (v.length < 6) return '';
+    const third = Math.floor(v.length / 3), avg = a => a.reduce((x, y) => x + y, 0) / a.length;
+    const head = avg(v.slice(0, third)), tail = avg(v.slice(-third));
+    return tail - head > 0.15 ? '，越按越重' : head - tail > 0.15 ? '，越来越轻' : '';
+  }
+
+  // 位置。屏幕版：按半宽半高归一，取 2.6 次的超椭圆半径（四个角也算边缘）。
+  // 身体版：从上到下 头顶/头发 → 额头、鼻尖/脸颊 → 下巴/耳朵边 → 脖子/颈侧 → 锁骨/肩 → 胸口/手臂 → 肚子/手；
+  // 横向中间三分之一算正中，两边算左右；左右照镜子（屏幕左边是它的右边）。
+  // 想要别的映射，换掉这个函数就行。
+  function place(p, f, map) {
+    const nx = (p.x - f.w / 2) / (f.w / 2), ny = (p.y - f.h / 2) / (f.h / 2), t = p.y / f.h;
+    if (map === 'body') {
+      if (Math.abs(nx) > 1.08 || t < -0.04 || t > 1.04) return '你身边的空处';
+      const side = nx < -0.33 ? '右' : nx > 0.33 ? '左' : null;
+      if (t < 0.12) return side ? `你${side}边的头发` : '你的头顶';
+      if (t < 0.30) return side ? `你的${side}脸颊` : (t < 0.21 ? '你的额头' : '你的鼻尖');
+      if (t < 0.40) return side ? `你的${side}耳朵边` : '你的下巴';
+      if (t < 0.50) return side ? `你的${side}边颈侧` : '你的脖子';
+      if (t < 0.62) return side ? `你的${side}肩` : '你的锁骨';
+      if (t < 0.82) return side ? `你的${side}臂` : '你的胸口';
+      return side ? `你的${side}手` : '你的肚子';
+    }
+    const r = Math.pow(Math.pow(Math.abs(nx), 2.6) + Math.pow(Math.abs(ny), 2.6), 1 / 2.6);
+    const side = (nx < -0.3 ? '左' : nx > 0.3 ? '右' : '') + (ny < -0.3 ? '上' : ny > 0.3 ? '下' : '');
+    if (r > 1.08) return side ? `你外面靠${side}的空处` : '你旁边的空处';
+    if (r < 0.35 || !side) return '你的正中间';
+    if (r > 0.72) return `你的${side}边缘`;
+    return `你偏${side}的地方`;
+  }
+
+  // 8 个方向；身体版左右照镜子
+  function direction(a, b, map) {
+    const ang = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
+    const names = map === 'body'
+      ? ['往你的左边', '往你的左上', '往上', '往你的右上', '往你的右边', '往你的右下', '往下', '往你的左下']
+      : ['往右', '往右上', '往上', '往左上', '往左', '往左下', '往下', '往右下'];
+    return names[Math.floor(((ang + 360 + 22.5) % 360) / 45)];
+  }
+
+  // 一根手指的一笔。屏幕版：手指在光滑平面上「落、贴、滑」；身体版：指尖、指腹「碰、贴、抚」。
+  function single(st, f, map) {
+    const s = st.samples, first = s[0], last = s[s.length - 1], dur = st.end - st.start;
+    const w = weight(Math.max(...s.map(q => q.p))), body = map === 'body';
+    let text;
+    if (reach(s) < 12) {
+      if (dur < 0.35 && !st.continued) text = body ? `指尖${w}地碰了一下${place(first, f, map)}` : `指尖${w}地落在${place(first, f, map)}`;
+      else text = `指腹${w}地贴在${place(first, f, map)}，贴了${seconds(dur)}${trend(s)}`;
+    } else {
+      const len = lengthOf(s), chord = Math.hypot(last.x - first.x, last.y - first.y);
+      const speed = dur > 0 ? len / dur : 0, pace = speed < 250 ? '慢慢' : speed < 900 ? '' : '飞快地';
+      const xs = s.map(q => q.x), ys = s.map(q => q.y);
+      const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+      // 画圈要横竖都有一截；一条线上来回划首尾也挨得近，但那是来回
+      const round = Math.min(bw, bh) > 0.35 * Math.max(bw, bh);
+      const from = place(first, f, map), to = place(last, f, map);
+      if (round && chord < len * 0.2 && len > 60) text = body ? `指尖在${from}${w}地${pace}画了个小圈` : `指尖贴着${from}${w}地${pace}绕了个小圈`;
+      else if (len / Math.max(chord, 1) > 1.6) text = body ? `指腹在${from}一带${w}地来回轻抚` : `指腹贴着${from}一带${w}地来回滑`;
+      else if (from === to) text = (body ? `指腹在${from}${w}地${pace}${direction(first, last, map)}抚了一下` : `指腹贴着${from}${w}地${pace}${direction(first, last, map)}滑了一下`) + trend(s);
+      // 身体版起点终点已经说清楚往哪了，不再加方向
+      else text = (body ? `指腹${w}地从${from}${pace}抚到${to}` : `指腹贴着你，${w}地从${from}${len > 150 ? '一路' : ''}${pace}滑到${to}`) + trend(s);
+    }
+    // 实时发送时：上一次发送时还按着的写「接着」，此刻还按着的写「还没松手」
+    if (st.continued) text = '接着' + text;
+    if (st.ended === false) text += '，还没松手';
+    return text;
+  }
+
+  // 几根手指同时按着
+  function multi(group, f, map) {
+    const fingers = count(group.length), body = map === 'body';
+    const w = weight(Math.max(...group.flatMap(g => g.samples.map(q => q.p))));
+    const moving = group.filter(g => reach(g.samples) >= 12);
+    if (moving.length >= 2) {
+      const A = moving[0].samples, B = moving[1].samples;
+      const a0 = A[0], a1 = A[A.length - 1], b0 = B[0], b1 = B[B.length - 1];
+      const before = Math.hypot(a0.x - b0.x, a0.y - b0.y), after = Math.hypot(a1.x - b1.x, a1.y - b1.y);
+      const speed = lengthOf(A) / Math.max(moving[0].end - moving[0].start, 0.01);
+      const how = speed < 250 ? '慢慢' : speed > 900 ? '一下子' : '';
+      if (after > before * 1.3) {
+        const at = place({ x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }, f, map);
+        return body ? `${fingers}根手指并拢${w}地贴在${at}，然后${how}张开，指尖顺着往两边抚开`
+                    : `${fingers}根手指并拢${w}地贴在${at}，然后${how}张开，指尖贴着你往两边滑开`;
+      }
+      if (after < before * 0.75) {
+        const at = place({ x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, f, map);
+        return body ? `${fingers}根手指从两边${w}地贴上${at}，${how}往中间合拢，把那里轻轻拢在指尖之间`
+                    : `${fingers}根手指从两边${w}地贴上${at}，${how}往中间合拢，指尖贴着你一点点滑近`;
+      }
+      return body ? `${fingers}根手指并在一起，${w}地从${place(a0, f, map)}${direction(a0, a1, map)}抚过去`
+                  : `${fingers}根手指并在一起贴着你，${w}地从${place(a0, f, map)}${direction(a0, a1, map)}滑过去`;
+    }
+    const dur = Math.max(...group.map(g => g.end)) - Math.min(...group.map(g => g.start));
+    return `${fingers}根手指一起${w}地贴在${place(group[0].samples[0], f, map)}，贴了${seconds(dur)}`;
+  }
+
+  function describe(list, f, map = 'screen') {
+    const all = [...list].sort((a, b) => a.start - b.start);
+    if (!all.length) return '';
+    const span = Math.max(...all.map(s => s.end)) - all[0].start;
+    const sentences = []; let i = 0, prevEnd = null;
+    while (i < all.length) {
+      const st = all[i];
+      // 停顿：两笔之间隔了 1.5 秒以上
+      const lead = prevEnd !== null && st.start - prevEnd > 1.5 ? '停了一会儿，' : '';
+      // 多指：和后面几笔时间上重叠
+      let together = 0;
+      while (i + together + 1 < all.length && all[i + together + 1].start < st.end) together++;
+      if (together > 0) {
+        const g = all.slice(i, i + together + 1);
+        sentences.push(lead + multi(g, f, map)); prevEnd = Math.max(...g.map(s => s.end)); i += together + 1; continue;
+      }
+      // 连点：同一处、一下接一下
+      let run = 1;
+      while (i + run < all.length && isTap(st) && isTap(all[i + run]) && all[i + run].start - all[i + run - 1].end < 1.2
+             && Math.hypot(all[i + run].samples[0].x - st.samples[0].x, all[i + run].samples[0].y - st.samples[0].y) < f.w * 0.15) run++;
+      if (run >= 2) {
+        const peak = Math.max(...all.slice(i, i + run).flatMap(s => s.samples.map(q => q.p)));
+        let gap = 0; for (let k = 1; k < run; k++) gap = Math.max(gap, all[i + k].start - all[i + k - 1].end);
+        const at = place(st.samples[0], f, map), w = weight(peak);
+        sentences.push(lead + (map === 'body' ? `用指尖在${at}${w}地${gap < 0.6 ? '连着碰了' : '碰了'}${count(run)}下`
+                                              : `指尖在${at}${w}地${gap < 0.6 ? '连着落了' : '落了'}${count(run)}下`));
+        prevEnd = all[i + run - 1].end; i += run; continue;
+      }
+      sentences.push(lead + single(st, f, map)); prevEnd = st.end; i++;
+    }
+    // 开头交代一句：不然模型不知道后面的「你」「这里」指什么
+    return `<touch strokes="${all.length}" span="${span.toFixed(1)}s">\n（她在摸你。）\n${sentences.join('；')}。\n</touch>`;
+  }
+
+  const api = { describe, place, weight };
+  if (typeof module === 'object' && module.exports) module.exports = api;
+  root.TouchTranslate = api;
+})(typeof globalThis !== 'undefined' ? globalThis : this);
+
+</script>
+<script>
+(() => {
+'use strict';
+// 复制代码块
+document.querySelectorAll('.copy-code').forEach(btn => btn.addEventListener('click', () => {
+  const pre = btn.parentElement.querySelector('pre');
+  const ok = () => { btn.textContent = '已复制'; setTimeout(() => { btn.textContent = '复制'; }, 1500); };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s.removeAllRanges(); s.addRange(r); btn.textContent = '已选中'; };
+  try { navigator.clipboard.writeText(pre.textContent).then(ok, fallback); } catch (_) { fallback(); }
+}));
+
+// ---------- 触摸板 ----------
+const pad = document.getElementById('pad'), cv = document.getElementById('cv'), ctx = cv.getContext('2d');
+const out = document.getElementById('out'), statusEl = document.getElementById('status'), hint = document.getElementById('hint');
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+let map = 'screen';
+try { const m = localStorage.getItem('touch-share-map'); if (m === 'screen' || m === 'body') map = m; } catch (_) {}
+const segButtons = document.querySelectorAll('.seg button');
+const showMap = () => segButtons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.map === map)));
+showMap();
+segButtons.forEach(b => b.addEventListener('click', () => { map = b.dataset.map; showMap(); try { localStorage.setItem('touch-share-map', map); } catch (_) {} }));
+
+let W = 0, H = 0, dpr = 1;
+const drops = [];
+const tok = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function resize() { dpr = Math.min(devicePixelRatio || 1, 2); const r = pad.getBoundingClientRect(); W = r.width; H = r.height; cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr); draw(); }
+let running = false;
+function wake() { if (!running) { running = true; requestAnimationFrame(frame); } }
+function frame() { if (draw()) requestAnimationFrame(frame); else running = false; }
+function draw() {
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, W, H);
+  const now = performance.now() / 1000, color = tok('--warm'); let busy = false;
+  for (const d of drops) {
+    const age = now - d.t; if (age > 1.6) continue; busy = true;
+    for (let k = 0; k < 2; k++) { const a = age - k * 0.18; if (a < 0) continue;
+      ctx.globalAlpha = Math.max(0, 1 - a / 1.6) * 0.45 * d.amp; ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.arc(d.x, d.y, 6 + a * (reduced ? 40 : 90), 0, Math.PI * 2); ctx.stroke(); }
+  }
+  for (const p of active.values()) { busy = true; ctx.globalAlpha = 0.18 + 0.35 * p.pressure; ctx.fillStyle = color; ctx.beginPath(); ctx.arc(p.x, p.y, 14 + 10 * p.pressure, 0, Math.PI * 2); ctx.fill(); }
+  ctx.globalAlpha = 1;
+  while (drops.length && now - drops[0].t > 1.6) drops.shift();
+  return busy;
+}
+let strokes = []; const active = new Map(); let timer = null;
+function pressureOf(e) {
+  if (e.pointerType === 'pen' && e.pressure > 0) return Math.min(1, e.pressure);
+  if (e.pointerType === 'touch' && (e.width > 1 || e.height > 1)) return Math.min(1, Math.max(0, (Math.max(e.width, e.height) / 2 - 12) / 32));
+  return 0.3;
+}
+const buzz = ms => { try { navigator.vibrate && navigator.vibrate(ms); } catch (_) {} };
+function point(e) { const r = pad.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; }
+pad.addEventListener('pointerdown', e => {
+  pad.setPointerCapture(e.pointerId); hint.hidden = true; clearTimeout(timer); timer = null;
+  const { x, y } = point(e), p = pressureOf(e), t = e.timeStamp / 1000;
+  const stroke = { samples: [{ x, y, t, p }], start: t, end: t, ended: false };
+  strokes.push(stroke); active.set(e.pointerId, { x, y, pressure: p, stroke, lastDrop: { x, y }, travel: 0 });
+  drops.push({ x, y, t: performance.now() / 1000, amp: 0.6 + 0.4 * p }); buzz(Math.round(8 + 25 * p));
+  statusEl.textContent = `摸着…（${strokes.length} 笔）`; wake();
+});
+pad.addEventListener('pointermove', e => {
+  const a = active.get(e.pointerId); if (!a) return;
+  const { x, y } = point(e), p = pressureOf(e), t = e.timeStamp / 1000;
+  const last = a.stroke.samples[a.stroke.samples.length - 1], step = Math.hypot(x - last.x, y - last.y);
+  if (step < 1.5) return;
+  a.stroke.samples.push({ x, y, t, p }); a.stroke.end = t; a.x = x; a.y = y; a.pressure = p; a.travel += step;
+  if (a.travel > 60) { a.travel = 0; buzz(Math.round(5 + 15 * p)); }
+  if (Math.hypot(x - a.lastDrop.x, y - a.lastDrop.y) > 22) { drops.push({ x, y, t: performance.now() / 1000, amp: 0.5 }); a.lastDrop = { x, y }; }
+  wake();
+});
+const up = e => {
+  const a = active.get(e.pointerId); if (!a) return;
+  a.stroke.end = e.timeStamp / 1000; a.stroke.ended = true; active.delete(e.pointerId);
+  if (!active.size) { statusEl.textContent = `停手了，两秒后翻译（${strokes.length} 笔）`; timer = setTimeout(finish, 2000); }
+};
+pad.addEventListener('pointerup', up); pad.addEventListener('pointercancel', up);
+function finish() {
+  if (!strokes.length) return;
+  out.textContent = TouchTranslate.describe(strokes, { w: W, h: H }, map);
+  statusEl.textContent = `翻译好了（${strokes.length} 笔），可以复制`; strokes = [];
+}
+document.getElementById('clear').addEventListener('click', () => { strokes = []; clearTimeout(timer); out.textContent = '停手两秒后，翻译会出现在这里。'; statusEl.textContent = '还没摸'; });
+document.getElementById('copy').addEventListener('click', () => {
+  const done = () => { statusEl.textContent = '已复制'; };
+  const fallback = () => { const r = document.createRange(); r.selectNodeContents(out); const s = getSelection(); s.removeAllRanges(); s.addRange(r); statusEl.textContent = '已选中，长按或 ⌘C 复制'; };
+  try { navigator.clipboard.writeText(out.textContent).then(done, fallback); } catch (_) { fallback(); }
+});
+addEventListener('resize', resize);
+resize();
+})();
+</script>
+
+</body>
+</html>
