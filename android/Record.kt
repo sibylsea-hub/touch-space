@@ -31,7 +31,9 @@ override fun onTouchEvent(e: MotionEvent): Boolean {
         MotionEvent.ACTION_UP, MotionEvent.ACTION_POINTER_UP, MotionEvent.ACTION_CANCEL -> {
             val i = e.actionIndex
             active.remove(e.getPointerId(i))?.ended = true
-            if (active.isEmpty()) scheduleTranslate()   // 两秒没再摸就翻译这一批（规则同 translate.js）
+            // 停手两秒自动发：两秒没再摸就翻译这一批（规则同 translate.js）。
+            // 和你的话一起发：这里不翻译，触摸一直攒着，用户点「确认」或「发送」时再翻译。
+            if (active.isEmpty() && autoSend) scheduleTranslate()
         }
     }
     return true

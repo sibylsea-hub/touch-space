@@ -1,0 +1,38 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0 -->
+<!-- 最小能跑的例子：下载整个仓库，用浏览器直接打开这个文件就能摸。接进自己的前端时，照抄这里的十几行。 -->
+<html lang="zh">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>触摸示例</title>
+<style>
+:root { --bg: #eef1f2; --blot: #b9cdd8; --muted: #7b8891; --warm: #e9a58f; --ink: #232a2f; }
+@media (prefers-color-scheme: dark) { :root { --bg: #14181b; --blot: #22333d; --muted: #8a979f; --warm: #b8604e; --ink: #e2e7ea; color-scheme: dark; } }
+html, body { margin: 0; height: 100%; overflow: hidden; background: var(--bg); color: var(--ink); font: 14px/1.6 -apple-system, "PingFang SC", "Noto Sans SC", sans-serif; }
+#touch { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+#out { position: fixed; left: 12px; right: 12px; bottom: calc(env(safe-area-inset-bottom, 0px) + 12px); white-space: pre-wrap;
+       background: color-mix(in srgb, var(--bg) 80%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+       border-radius: 12px; padding: 10px 12px; pointer-events: none; font-size: 12px; }
+#out:empty { display: none; }
+</style>
+</head>
+<body>
+<canvas id="touch" aria-label="触摸区域"></canvas>
+<div id="out"></div>
+
+<script src="../translate.js"></script>
+<script src="touch-surface.js"></script>
+<script>
+const out = document.getElementById('out');
+const surface = TouchSurface.create(document.getElementById('touch'), {
+  effect: 'skin',        // 'ripple' 水纹 / 'skin' 皮肤
+  map: 'screen',         // 'screen' 屏幕 / 'body' 上半身 / 'lower' 下半身
+  onBatch: text => {
+    out.textContent = text;
+    // 接进自己的前端：把 text 放进输入框，或者用 send-from-your-frontend.js 的 buildMessage(草稿, text) 拼进消息
+  },
+});
+</script>
+</body>
+</html>

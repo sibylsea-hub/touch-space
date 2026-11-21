@@ -1,15 +1,16 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// 触感空间 · iOS 参考代码：画面效果的「物理」和截图。
-// TouchSnapshot：进触感空间时把聊天页拍成一张图（之后在着色器里扭它）。
-// TouchFilter：水纹的滴、皮肤的手指槽，每帧推一次，打包成着色器的统一参数（布局见 TouchFilter.metal 开头）。
-// 渲染器没有放进来：一个 MTKView、一个全屏三角形、一张纹理，静下来（isBusy == false）就 isPaused = true。
-
 import Foundation
 import QuartzCore
 import CoreGraphics
 import simd
+#if os(iOS)
 import UIKit
+#else
+import AppKit
+#endif
 
+/// 触感空间的两种「看法」：整块聊天页（进空间前截的图）在手指下怎么变形。
+/// 常数与仓库里 web/touch-surface.js 的着色器一致。
 enum TouchLook: String, CaseIterable, Identifiable {
     /// 水纹（缺省）：手指下起一两道圈，往外走、变宽、变淡。
     case ripple
@@ -45,7 +46,8 @@ enum TouchLook: String, CaseIterable, Identifiable {
 }
 
 /// 进空间前给窗口截的那张图，连同它在「截图坐标」下的尺寸（pt）。
-/// 截的是聊天那一层窗口，坐标 = 窗口坐标（左上原点）。
+/// iOS：截的是 key window，坐标 = 窗口坐标。Mac：截的是 key window 的 `contentView`，坐标 = contentView 坐标（左上原点）。
+/// 画布按自己在这个坐标里的矩形取对应的那一块（画布可以只盖住聊天页的一部分，不必是整个窗口）。
 struct TouchSnapshot {
     let id = UUID()
     /// sRGB、BGRA 8 位（着色器原样取色写进 `bgra8Unorm` 画布 = 和截图前看到的一样）。
@@ -68,7 +70,8 @@ struct TouchSnapshot {
 
     @MainActor
     static func capture(in host: AnyObject? = nil) throws -> TouchSnapshot {
-        // 拍聊天那一层（传进来的 host 窗口）；没有就拍 key window。触感空间自己最好在另一层窗口里，才不会被拍进去。
+        #if os(iOS)
+        // 拍聊天那一层（`space.hostWindow`）；没有就拍 key window。触感空间自己在另一层窗口里，拍不进来。
         let windows = UIApplication.shared.connectedScenes.compactMap { $0 as? UIWindowScene }.flatMap(\.windows)
         guard let window = (host as? UIWindow) ?? windows.first(where: \.isKeyWindow) else { throw Failure.noKeyWindow }
         let format = UIGraphicsImageRendererFormat()
@@ -83,8 +86,31 @@ struct TouchSnapshot {
         }
         guard complete else { throw Failure.incomplete }
         return TouchSnapshot(image: try srgb(image.cgImage!), size: window.bounds.size)
+        #else
+        guard let window = NSApp.keyWindow, let content = window.contentView else { throw Failure.noKeyWindow }
+        // 用图层树渲染（`CALayer.render(in:)`），不用 `cacheDisplay(in:to:)`：后者截 SwiftUI 的聊天记录只截到字，
+        // 气泡、卡片、底色全空（实测）。窗口服务器合成的东西（毛玻璃、桌面取色的窗口底色）两种都截不到，
+        // 先铺一层窗口底色，免得透明处成了黑块。直接画进 sRGB 位图（画布按 sRGB 显示）。
+        let scale = window.backingScaleFactor
+        let width = Int((content.bounds.width * scale).rounded()), height = Int((content.bounds.height * scale).rounded())
+        let info = CGImageAlphaInfo.premultipliedFirst.rawValue | CGBitmapInfo.byteOrder32Little.rawValue
+        guard let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                      space: CGColorSpace(name: CGColorSpace.sRGB)!, bitmapInfo: info)
+        else { throw Failure.convert }
+        context.setFillColor(window.backgroundColor.cgColor)
+        context.fill(CGRect(x: 0, y: 0, width: width, height: height))
+        context.scaleBy(x: scale, y: scale)
+        if content.layer!.isGeometryFlipped || content.isFlipped {
+            context.translateBy(x: 0, y: content.bounds.height)
+            context.scaleBy(x: 1, y: -1)
+        }
+        content.layer!.render(in: context)
+        guard let image = context.makeImage() else { throw Failure.convert }
+        return TouchSnapshot(image: image, size: content.bounds.size)
+        #endif
     }
 
+    #if os(iOS)
     /// 画进一张 sRGB 的 BGRA 位图（统一成着色器原样取色的格式）。
     private static func srgb(_ image: CGImage) throws -> CGImage {
         let space = CGColorSpace(name: CGColorSpace.sRGB)!
@@ -95,22 +121,25 @@ struct TouchSnapshot {
         guard let out = context.makeImage() else { throw Failure.convert }
         return out
     }
+    #endif
 }
 
-/// 画面的手指物理。坐标一律是画布里的点（pt，左上原点，y 向下；Metal 的片元坐标也是左上原点，不用翻）。
+/// 滤镜的手指物理：网页草图 `stepSlot` / `pointerdown` / `pointermove` 的逐行移植，常数照搬。
+/// 坐标一律是画布里的点（pt，左上原点，y 向下）；草图里传给着色器前做的 y 翻转在这里不需要
+/// （Metal 的片元坐标本来就是左上原点）。
 ///
-/// - 水纹：按下落一滴（强度 1），划动每 22pt 落一滴，强度 0.35 + min(速度 / 2200, 0.5)；最多 40 滴，1.6 秒散完。
+/// - 水纹：按下落一滴（强度 1），划动每 22pt 落一滴，强度 0.35 + min(速度 / 2200, 0.5)；环形缓冲最多 40 滴，1.6 秒散完。
 /// - 皮肤：最多 5 个手指槽，固定子步 1/240 秒推弹簧。
 @MainActor
 final class TouchFilter {
     static let maxDrops = 40
     static let maxFingers = 5
     static let dropLife: Double = 1.6
-    /// 统一参数（一串 float4）的布局，与 `.metal` 里 `kFilter*` 一起改：
+    /// 统一参数（一串 float4）的布局，与 `.metal` 里 `kTouchFilter*` 一起改：
     ///   u[0] = 画布像素宽高、时间（秒）、模式
-    ///   u[1] = 渲染缩放（像素 / pt）、幅度（减弱动态效果时 0.5）、皮肤范围倍数、0
+    ///   u[1] = 渲染缩放（草图的 uDpr）、幅度（减弱动态效果时 0.5）、皮肤范围倍数、0
     ///   u[2] = 画布在截图里的 UV 子矩形：原点 xy、尺寸 zw
-    ///   u[3] = 暖色 rgb、0；u[4] = 空着
+    ///   u[3] = 暖色 rgb、0；u[4] = 空着（原来是涌向指尖的指尖光）
     ///   u[5 + i]  = 第 i 滴水：x、y（像素）、起始时刻、强度
     ///   u[45 + i] = 第 i 根手指：x、y（像素）、深度 / 吸力、暖
     ///   u[50 + i] = 第 i 根手指（皮肤）被拖着走的位移 x、y（像素）、0、0
@@ -167,6 +196,7 @@ final class TouchFilter {
 
     private var now: Double { CACurrentMediaTime() - epoch }
 
+    /// 换效果 / 关空间：清掉正在动的波纹和手指（草图点按钮时同样清）。
     func reset(_ look: TouchLook) {
         self.look = look
         drops = []
@@ -264,6 +294,7 @@ final class TouchFilter {
         } else {
             index = slots.indices.min { slots[$0].downAt < slots[$1].downAt }!
         }
+        // 草图：深度、深度速度、暖从这个槽原来的值接着走，其余重置。
         let old = slots[index]
         slots[index] = Slot(key: key, downAt: now, fx: x, fy: y, cx: x, cy: y, gx: x, gy: y,
                             depth: old.depth, dv: old.dv, warm: old.warm)
@@ -272,6 +303,7 @@ final class TouchFilter {
 
     // MARK: 推进
 
+    /// 每帧调一次：按固定子步 1/240 秒推手指槽（一帧最多算 1/20 秒，同草图）。
     func advance(dt: Double) {
         guard look != .ripple, !slots.isEmpty else { return }
         let dt = min(dt, 1.0 / 20)
@@ -290,6 +322,7 @@ final class TouchFilter {
             if s.active {
                 s.cx = s.fx; s.cy = s.fy
                 // 皮肤贴着手指：抓住的那一点追上手指，中间被拉开的就是皮肤被拖着走的量。
+                // 收紧（要跟着手指）：k 14→40（追上从约半秒缩到约 0.3 秒），位移上限 46→24pt。
                 let k = 40.0, c = 2 * sqrt(k)
                 s.gvx += (k * (s.fx - s.gx) - c * s.gvx) * h
                 s.gvy += (k * (s.fy - s.gy) - c * s.gvy) * h
@@ -321,7 +354,9 @@ final class TouchFilter {
     // MARK: 统一参数
 
     /// - Parameters:
+    ///   - scale: 画布像素 / pt（草图的 uDpr；iOS 封顶 2）。
     ///   - uvRect: 画布在截图里的 UV 子矩形（0…1）。
+    ///   - dark: 深色外观（暖色与指尖光取暗色那一对，同草图的页面 token）。
     func uniforms(pixels: CGSize, scale: Double, uvRect: CGRect, dark: Bool, amp: Float) -> [SIMD4<Float>] {
         var u = [SIMD4<Float>](repeating: .zero, count: Self.uniformCount)
         let k = Float(scale)

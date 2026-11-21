@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// 触感空间 · iOS 参考代码：全屏片元着色器（水纹 / 皮肤）。网页版同一套写成 GLSL，见 mcp/pad.html。
-
+// 触感空间的着色器（全屏滤镜）。
 //
 // 进空间前截的聊天页是一张纹理，`touch_filter_fragment` 按手指算每个像素该从截图的哪里取色。
-// 和网页 GLSL 版的差别只有坐标系：GLSL 的 gl_FragCoord 左下原点、y 向上，Metal 的片元坐标左上原点、y 向下，所以
+// 和 web/touch-surface.js 里的 GLSL 是同一套，常数照搬。与草图的差别只有坐标系：
+// 草图用 gl_FragCoord（左下原点、y 向上），这里用 Metal 的片元坐标（左上原点、y 向下），所以
 // - 手指、水滴的位置直接传像素坐标，不做 `H - y` 翻转；皮肤的拖拽位移 y 也不取反；
 // - 皮肤的光照方向 (-.55, .8) 写成 (-.55, -.8)。
 //
 // 统一参数 `u` 是一串 float4，下标与 Swift 侧 `TouchFilter.uniforms` 一一对应（改一边必须改另一边）：
 //   u[0] = 画布像素宽高、时间（秒）、模式（0 水纹 / 1 皮肤）
-//   u[1] = 渲染缩放（像素 / pt）、幅度、皮肤范围倍数、0
+//   u[1] = 渲染缩放（草图的 uDpr）、幅度、皮肤范围倍数（调参面板，1 = 出厂）、0
 //   u[2] = 画布在截图里的 UV 子矩形：原点 xy、尺寸 zw
 //   u[3] = 暖色 rgb；u[4] = 空着
 //   u[5 + i]  = 第 i 滴水：x、y（像素）、起始时刻、强度（40 滴）
@@ -19,11 +19,11 @@
 #include <metal_stdlib>
 using namespace metal;
 
-constant int kFilterDrops = 40;
-constant int kFilterFingers = 5;
-constant int kFilterDropBase = 5;
-constant int kFilterFingerBase = 45;
-constant int kFilterOffsetBase = 50;
+constant int kTouchFilterDrops = 40;
+constant int kTouchFilterFingers = 5;
+constant int kTouchFilterDropBase = 5;
+constant int kTouchFilterFingerBase = 45;
+constant int kTouchFilterOffsetBase = 50;
 
 struct TouchVOut {
     float4 position [[position]];
@@ -55,9 +55,10 @@ fragment float4 touch_filter_fragment(TouchVOut in [[stage_in]],
         float2 disp = float2(0.0);
         float light = 0.0;
         // 一滴只起一两道圈：包络比波长窄，圈往外走、变宽、变淡。
-        for (int i = 0; i < kFilterDrops; i++) {
-            float4 d = u[kFilterDropBase + i];
+        for (int i = 0; i < kTouchFilterDrops; i++) {
+            float4 d = u[kTouchFilterDropBase + i];
             float age = time - d.z;
+            // 缩小过（水纹太大会扫过整块屏幕）：原来圈以 300pt/s 走 2.6 秒、能扫过整块屏幕。
             // 现在 150pt/s、1.6 秒散完、衰减更快、波长更短，圈大约在指尖外一两百 pt 内就淡掉。
             if (d.w <= 0.0 || age < 0.0 || age > 1.6) continue;
             float lam = (22.0 + 18.0 * age) * dpr, w = lam * 0.55;
@@ -74,10 +75,11 @@ fragment float4 touch_filter_fragment(TouchVOut in [[stage_in]],
         add = float3(light * 0.06 * amp);
     } else {
         const float2 L = normalize(float2(-0.55, -0.8));
-        for (int i = 0; i < kFilterFingers; i++) {
-            float4 f = u[kFilterFingerBase + i];
-            float2 o = u[kFilterOffsetBase + i].xy;
+        for (int i = 0; i < kTouchFilterFingers; i++) {
+            float4 f = u[kTouchFilterFingerBase + i];
+            float2 o = u[kTouchFilterOffsetBase + i].xy;
             if (abs(f.z) < 1e-4 && dot(o, o) < 1e-4) continue;
+            // 真机上调小过（变形面积要小一些、跟着手指）：
             // 凹陷 58→34pt（按久了 +18→+8），被拖的那圈 R²×3.2→×1.6（≈104pt→43pt）。
             // 高斯在 2R 处才淡到看不出，所以 34pt 大约是「指腹边上再露出一圈」，不会整块藏在手指底下。
             float R = (34.0 + 8.0 * f.w) * dpr * skinSize;

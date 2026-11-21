@@ -1,14 +1,16 @@
 // SPDX-License-Identifier: PolyForm-Noncommercial-1.0.0
-// 触感空间 · iOS 参考代码：震动（Core Haptics）。按下一下 ∝ 轻重；抚的时候一条循环的连续震动，强度跟着轻重、锐度跟着速度。
-
 import Foundation
+#if os(iOS)
 import CoreHaptics
+#else
+import AppKit
+#endif
 
-/// 触感空间的震动（Core Haptics）。
-/// - 按下：一下 transient，强度和算出来的轻重成正比。
-/// - 抚：一条循环的 continuous，强度跟着此刻的轻重走，速度只管锐度（越快越脆）和一点力度。
-/// - 松手：轻轻一弹，按得越久越明显。
-/// 强度都乘 `strength()`（0.5 = 基准，1 = 两倍，封顶 1）。模拟器和不支持的机型上不响。
+/// 触感空间的震动。
+/// - iOS：Core Haptics。按下一下 transient，强度和算出来的轻重成正比；抚的时候一条循环的 continuous，
+///   强度跟着此刻的轻重走（和力度成比例），速度只管锐度（越快越脆）和一点点力度；摸好点 ✓ 放进输入框时一下；离手一下轻弹。模拟器与不支持的机型上 `supportsHaptics` 为假，全部不响。
+/// - Mac：没有 Core Haptics，用 `NSHapticFeedbackManager` 尽量对应（只有 Force Touch 触控板上有感觉）。
+/// 强度都乘调参面板的「触感强度」（0.5 = 基准，1 = 两倍，封顶 1；出厂 0.53）。
 @MainActor
 final class TouchHaptics {
     private let strength: () -> Double
@@ -23,6 +25,7 @@ final class TouchHaptics {
         Float(min(1, intensity * strength() * 2))
     }
 
+    #if os(iOS)
     private let supported = CHHapticEngine.capabilitiesForHardware().supportsHaptics
     private var engine: CHHapticEngine?
     private var stroke: CHHapticAdvancedPatternPlayer?
@@ -105,4 +108,29 @@ final class TouchHaptics {
             report("触感放不出来：\(error)")
         }
     }
+    #else
+    private var travelled: Float = 0
+
+    func prepare() {}
+    func tap(_ pressure: CGFloat) { perform(.generic) }
+    func release(_ holdGain: Float) { perform(.alignment) }
+    func placed() { perform(.levelChange) }
+    func sent() { perform(.alignment) }
+
+    /// 触控板没有连续震动、也调不了力度：每抚过约 60pt 轻敲一下。
+    func stroke(speed: Float, pressure: CGFloat) {
+        travelled += speed / 120
+        if travelled > 60 {
+            travelled = 0
+            perform(.alignment)
+        }
+    }
+
+    func strokeEnded() { travelled = 0 }
+
+    private func perform(_ pattern: NSHapticFeedbackManager.FeedbackPattern) {
+        guard strength() > 0.05 else { return }
+        NSHapticFeedbackManager.defaultPerformer.perform(pattern, performanceTime: .now)
+    }
+    #endif
 }

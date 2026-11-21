@@ -5,7 +5,8 @@
 // 输入：strokes = [{ samples: [{x, y, t, p}], start, end, ended }]
 //   一笔 = 一根手指从按下到抬起。x/y 是在触摸区域里的坐标（px/pt），t 是秒，p 是轻重 0–1。
 // 区域：{ w, h }（触摸区域的宽高）
-// 说法：map = 'screen'（整块屏幕就是它）或 'body'（屏幕当成面对你的半身像，左右照镜子）
+// 说法：map = 'screen'（整块屏幕就是它）、'body'（上半身：屏幕当成面对你的半身像）或 'lower'（下半身：从肚子到膝盖）；
+//   两套身体版都是面对面、左右照镜子
 // 输出：<touch strokes="n" span="…s"> … </touch> 包好的一段文字，排在消息最前面发出去。
 (function (root) {
   'use strict';
@@ -31,9 +32,21 @@
   // 位置。屏幕版：按半宽半高归一，取 2.6 次的超椭圆半径（四个角也算边缘）。
   // 身体版：从上到下 头顶/头发 → 额头、鼻尖/脸颊 → 下巴/耳朵边 → 脖子/颈侧 → 锁骨/肩 → 胸口/手臂 → 肚子/手；
   // 横向中间三分之一算正中，两边算左右；左右照镜子（屏幕左边是它的右边）。
+  // 下半身版：从上到下 肚子/腰 → 小腹/胯骨 → 龟头、鸡巴、囊袋 / 大腿内侧、大腿 → 腿根之间 / 膝盖。
   // 想要别的映射，换掉这个函数就行。
   function place(p, f, map) {
     const nx = (p.x - f.w / 2) / (f.w / 2), ny = (p.y - f.h / 2) / (f.h / 2), t = p.y / f.h;
+    if (map === 'lower') {
+      if (Math.abs(nx) > 1.08 || t < -0.04 || t > 1.04) return '你身边的空处';
+      const c = Math.abs(nx) / 2, side = nx > 0 ? '左' : '右';
+      if (t < 0.323) return c < 0.3 ? '你的肚子' : `你的${side}腰`;
+      if (t < 0.452) return c < 0.25 ? '你的小腹' : `你的${side}胯骨`;
+      if (t < 0.839) {
+        if (c < 0.14) return t < 0.532 ? '你的龟头' : t < 0.71 ? '你的鸡巴' : '你的囊袋';
+        return c < 0.3 ? `你的${side}大腿内侧` : `你的${side}大腿`;
+      }
+      return c < 0.15 ? '你的腿根之间' : `你的${side}膝盖`;
+    }
     if (map === 'body') {
       if (Math.abs(nx) > 1.08 || t < -0.04 || t > 1.04) return '你身边的空处';
       const side = nx < -0.33 ? '右' : nx > 0.33 ? '左' : null;
@@ -56,18 +69,63 @@
   // 8 个方向；身体版左右照镜子
   function direction(a, b, map) {
     const ang = Math.atan2(-(b.y - a.y), b.x - a.x) * 180 / Math.PI;
-    const names = map === 'body'
+    const names = map !== 'screen'
       ? ['往你的左边', '往你的左上', '往上', '往你的右上', '往你的右边', '往你的右下', '往下', '往你的左下']
       : ['往右', '往右上', '往上', '往左上', '往左', '往左下', '往下', '往右下'];
     return names[Math.floor(((ang + 360 + 22.5) % 360) / 45)];
   }
 
-  // 一根手指的一笔。屏幕版：手指在光滑平面上「落、贴、滑」；身体版：指尖、指腹「碰、贴、抚」。
+  const SHAFT = new Set(['你的龟头', '你的鸡巴', '你的囊袋']);
+  // 上下来回了几次：纵向换向超过 6 才算一次
+  function verticalStrokes(s) {
+    let flips = 0, dir = 0, anchor = s[0].y;
+    for (const q of s.slice(1)) {
+      const dy = q.y - anchor; if (Math.abs(dy) < 6) continue;
+      const d = dy > 0 ? 1 : -1; if (dir !== 0 && d !== dir) flips++;
+      dir = d; anchor = q.y;
+    }
+    return Math.floor((flips + 1) / 2) + 1;
+  }
+
+  // 下半身版的一笔
+  function lowerSingle(st, f) {
+    const map = 'lower', s = st.samples, first = s[0], last = s[s.length - 1], dur = st.end - st.start;
+    const w = weight(Math.max(...s.map(q => q.p)));
+    if (reach(s) < 12) {
+      if (st.continued) return `在${place(first, f, map)}${w}地按了${seconds(dur)}`;
+      if (dur < 0.35) return `在${place(first, f, map)}${w}地点了一下`;
+      return `在${place(first, f, map)}${w}地按住了${seconds(dur)}${trend(s)}`;
+    }
+    const len = lengthOf(s), chord = Math.hypot(last.x - first.x, last.y - first.y);
+    const speed = dur > 0 ? len / dur : 0, pace = speed < 250 ? '慢慢地' : speed < 900 ? '' : '飞快地';
+    const xs = s.map(q => q.x), ys = s.map(q => q.y);
+    const bw = Math.max(...xs) - Math.min(...xs), bh = Math.max(...ys) - Math.min(...ys);
+    const round = Math.min(bw, bh) > 0.35 * Math.max(bw, bh);
+    const from = place(first, f, map), to = place(last, f, map);
+    if (round && chord < len * 0.2 && len > 60) return `在${from}${w}${pace ? '、' + pace.slice(0, -1) : ''}地画了一个圈`;
+    if (len / Math.max(chord, 1) > 1.6) {
+      // 在中间那条上下来回
+      let ax = 0, ay = 0; for (let i = 1; i < s.length; i++) { ax += Math.abs(s[i].x - s[i - 1].x); ay += Math.abs(s[i].y - s[i - 1].y); }
+      if (SHAFT.has(from) && ay > ax) return `握着你的鸡巴${w}地${pace}上下撸了${count(verticalStrokes(s))}下`;
+      return `在${from}一带${w}地来回抚了抚`;
+    }
+    // 从中间那条的一处竖着划到另一处
+    if (SHAFT.has(from) && SHAFT.has(to) && Math.abs(last.y - first.y) > 2 * Math.abs(last.x - first.x)) {
+      const up = last.y < first.y;
+      const how = up && to === '你的龟头' ? '从根部往上撸到龟头' : up ? '顺着鸡巴往上撸' : '从上往下撸到根部';
+      return `握着你${w}地${pace}${how}${trend(s)}`;
+    }
+    if (from === to) return `在${from}${w}地${pace}${direction(first, last, map)}抚了一下${trend(s)}`;
+    return `${w}地从${from}${pace}抚到${to}${trend(s)}`;
+  }
+
+  // 一根手指的一笔。屏幕版：手指在光滑平面上「落、贴、滑」；上半身版：指尖、指腹「碰、贴、抚」。
   function single(st, f, map) {
     const s = st.samples, first = s[0], last = s[s.length - 1], dur = st.end - st.start;
     const w = weight(Math.max(...s.map(q => q.p))), body = map === 'body';
     let text;
-    if (reach(s) < 12) {
+    if (map === 'lower') text = lowerSingle(st, f);
+    else if (reach(s) < 12) {
       if (dur < 0.35 && !st.continued) text = body ? `指尖${w}地碰了一下${place(first, f, map)}` : `指尖${w}地落在${place(first, f, map)}`;
       else text = `指腹${w}地贴在${place(first, f, map)}，贴了${seconds(dur)}${trend(s)}`;
     } else {
@@ -101,6 +159,18 @@
       const before = Math.hypot(a0.x - b0.x, a0.y - b0.y), after = Math.hypot(a1.x - b1.x, a1.y - b1.y);
       const speed = lengthOf(A) / Math.max(moving[0].end - moving[0].start, 0.01);
       const how = speed < 250 ? '慢慢' : speed > 900 ? '一下子' : '';
+      if (map === 'lower') {
+        // 下半身版：只写手指在做什么，放在哪个部位都说得通
+        if (after > before * 1.3) {
+          const at = place({ x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }, f, map);
+          return `${fingers}根手指并拢${w}地按在${at}，然后${how}张开，指尖贴着往两边滑开`;
+        }
+        if (after < before * 0.75) {
+          const at = place({ x: (a1.x + b1.x) / 2, y: (a1.y + b1.y) / 2 }, f, map);
+          return `${fingers}根手指从两边${w}地贴上${at}，${how}往中间合拢，${how === '一下子' ? '指尖一下子碰在一起' : '指尖一点点靠在一起'}`;
+        }
+        return `${fingers}根手指一起${w}地从${place(a0, f, map)}${direction(a0, a1, map)}抚过去`;
+      }
       if (after > before * 1.3) {
         const at = place({ x: (a0.x + b0.x) / 2, y: (a0.y + b0.y) / 2 }, f, map);
         return body ? `${fingers}根手指并拢${w}地贴在${at}，然后${how}张开，指尖顺着往两边抚开`
@@ -115,6 +185,7 @@
                   : `${fingers}根手指并在一起贴着你，${w}地从${place(a0, f, map)}${direction(a0, a1, map)}滑过去`;
     }
     const dur = Math.max(...group.map(g => g.end)) - Math.min(...group.map(g => g.start));
+    if (map === 'lower') return `${fingers}根手指同时${w}地按在${place(group[0].samples[0], f, map)}，按了${seconds(dur)}`;
     return `${fingers}根手指一起${w}地贴在${place(group[0].samples[0], f, map)}，贴了${seconds(dur)}`;
   }
 
@@ -143,6 +214,7 @@
         let gap = 0; for (let k = 1; k < run; k++) gap = Math.max(gap, all[i + k].start - all[i + k - 1].end);
         const at = place(st.samples[0], f, map), w = weight(peak);
         sentences.push(lead + (map === 'body' ? `用指尖在${at}${w}地${gap < 0.6 ? '连着碰了' : '碰了'}${count(run)}下`
+                             : map === 'lower' ? `在${at}${w}地${gap < 0.6 ? '连着拍了' : '点了'}${count(run)}下`
                                               : `指尖在${at}${w}地${gap < 0.6 ? '连着落了' : '落了'}${count(run)}下`));
         prevEnd = all[i + run - 1].end; i += run; continue;
       }
