@@ -1,3 +1,5 @@
+中文 | [English](README.en.md)
+
 # 触感空间
 
 让你的 AI 感觉到你的手指。
